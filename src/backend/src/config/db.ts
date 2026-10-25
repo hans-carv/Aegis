@@ -10,6 +10,6 @@ export const pool = new Pool({
 
 export const query = (text: string, params?: any[]) => pool.query(text, params);
 
-export const closePool = async () => {
+export const closePool = async (): Promise<void> => {
   await pool.end();
 };
