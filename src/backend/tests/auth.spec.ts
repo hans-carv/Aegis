@@ -39,10 +39,9 @@ describe('SCRUM-12 / Control de Acceso y Autenticación RBAC', () => {
   });
 
   it('DoD #4: Retorna 403 Forbidden cuando un usuario común intenta acceder a una ruta de admin', async () => {
-    // Usamos el correo real de tu base de datos: cliente@ucb.edu.bo
     const loginUser = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'cliente@ucb.edu.bo', password: 'TeoCat2026*' });
+      .send({ email: 'cliente@teocatcafe.bo', password: 'TeoCat2026*' });
 
     expect(loginUser.status).toBe(200);
     userToken = loginUser.body.token;

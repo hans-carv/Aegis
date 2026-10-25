@@ -1,6 +1,7 @@
 // src/services/cats.service.ts
 import { query } from '../config/db';
 import { CreateCatDto, UpdateCatDto } from '../dtos/cat.dto';
+import { PublicCatResponseDto } from '../dtos/public-cat.dto';
 
 export class CatsService {
   static async registrarFelino(dto: CreateCatDto) {
@@ -47,9 +48,9 @@ export class CatsService {
       throw { status: 400, message: 'La edad estimada en meses debe ser un número entero positivo mayor a 0.' };
     }
 
-    const estadosValidos = ['CUARENTENA', 'ADOPCION', 'ADOPTADO'];
+    const estadosValidos = ['CUARENTENA', 'DISPONIBLE', 'ADOPCION', 'ADOPTADO'];
     if (!estadosValidos.includes(estado)) {
-      throw { status: 400, message: 'El estado debe ser CUARENTENA o ADOPCION.' };
+      throw { status: 400, message: 'El estado debe ser CUARENTENA, DISPONIBLE o ADOPCION.' };
     }
 
     try {
@@ -96,7 +97,7 @@ export class CatsService {
       throw err;
     }
   }
-  
+
   static async listarFelinos(userRole?: string) {
     const sql = `
       SELECT id, codigo_felino, nombre, peso, talla, edad_meses, temperamento, color_pelaje, sexo, estado, foto_url, historia, created_at
@@ -172,6 +173,40 @@ export class CatsService {
     ]);
 
     return res.rows[0];
+  }
+
+  static async obtenerCatalogoPublico(): Promise<PublicCatResponseDto[]> {
+    const sql = `
+      SELECT 
+        id,
+        codigo_felino,
+        nombre,
+        edad_meses,
+        temperamento,
+        talla,
+        color_pelaje,
+        sexo,
+        historia,
+        estado
+      FROM public.gatos
+      WHERE estado = 'DISPONIBLE'
+      ORDER BY created_at DESC
+    `;
+
+    const res = await query(sql);
+
+    return res.rows.map((row) => ({
+      id: row.id,
+      codigoFelino: row.codigo_felino,
+      nombre: row.nombre,
+      edadMeses: row.edad_meses,
+      temperamento: row.temperamento,
+      talla: row.talla,
+      colorPelaje: row.color_pelaje,
+      sexo: row.sexo,
+      historia: row.historia,
+      estado: row.estado,
+    }));
   }
 }
 
