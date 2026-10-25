@@ -22,3 +22,67 @@ CREATE TABLE IF NOT EXISTS ingresos_felinos (
         OR (via_procedencia <> 'FUNDACION')
     )
 );
+
+
+
+
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+CREATE TABLE IF NOT EXISTS public.gatos (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    codigo_felino VARCHAR(50) NOT NULL,
+    nombre VARCHAR(100) NOT NULL,
+    peso NUMERIC(5,2) NOT NULL,
+    talla VARCHAR(20),
+    edad_meses INT NOT NULL,
+    temperamento VARCHAR(150),
+    color_pelaje VARCHAR(50),
+    sexo VARCHAR(10) CHECK (sexo IN ('MACHO', 'HEMBRA')),
+    estado VARCHAR(20) NOT NULL DEFAULT 'CUARENTENA' CHECK (estado IN ('CUARENTENA', 'ADOPCION', 'ADOPTADO')),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_gatos_codigo_felino UNIQUE (codigo_felino),
+    CONSTRAINT chk_gatos_peso_positivo CHECK (peso > 0),
+    CONSTRAINT chk_gatos_edad_positiva CHECK (edad_meses > 0)
+);
+
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='gatos' AND column_name='codigo_felino') THEN
+        ALTER TABLE public.gatos ADD COLUMN codigo_felino VARCHAR(50) UNIQUE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='gatos' AND column_name='peso') THEN
+        ALTER TABLE public.gatos ADD COLUMN peso NUMERIC(5,2) CHECK (peso > 0);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='gatos' AND column_name='talla') THEN
+        ALTER TABLE public.gatos ADD COLUMN talla VARCHAR(20);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='gatos' AND column_name='temperamento') THEN
+        ALTER TABLE public.gatos ADD COLUMN temperamento VARCHAR(150);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='gatos' AND column_name='estado') THEN
+        ALTER TABLE public.gatos ADD COLUMN estado VARCHAR(20) NOT NULL DEFAULT 'CUARENTENA' CHECK (estado IN ('CUARENTENA', 'ADOPCION', 'ADOPTADO'));
+    END IF;
+END $$;
+ALTER TABLE public.gatos
+  ADD COLUMN IF NOT EXISTS foto_url TEXT,
+  ADD COLUMN IF NOT EXISTS historia TEXT;
+CREATE INDEX IF NOT EXISTS idx_gatos_codigo_felino ON public.gatos (codigo_felino);
+
+
+
+ALTER TABLE public.gatos DROP CONSTRAINT IF EXISTS gatos_estado_check;
+ALTER TABLE public.gatos 
+  ADD CONSTRAINT gatos_estado_check 
+  CHECK (estado IN ('CUARENTENA', 'DISPONIBLE', 'ADOPCION', 'ADOPTADO'));
+
+DELETE FROM public.gatos WHERE codigo_felino IN ('CAT-PUB-01', 'CAT-PUB-02', 'CAT-PUB-03', 'CAT-PUB-04');
+
+INSERT INTO public.gatos (
+  codigo_felino, nombre, peso, talla, edad_meses, temperamento, color_pelaje, sexo, estado, foto_url, historia
+) VALUES 
+  ('CAT-PUB-01', 'Oliver', 4.10, 'Mediano', 12, 'Cariñoso y tranquilo', 'Naranja', 'MACHO', 'DISPONIBLE', 'https://storage.teocatcafe.bo/cats/oliver-privado.jpg', 'Rescatado de cachorro, busca un hogar amoroso.'),
+  ('CAT-PUB-02', 'Mía', 3.50, 'Pequeño', 8, 'Juguetona y curiosa', 'Calicó', 'HEMBRA', 'DISPONIBLE', 'https://storage.teocatcafe.bo/cats/mia-privada.jpg', 'Hermana de Oliver, le encantan las pelotas de lana.'),
+  ('CAT-PUB-03', 'Thor', 5.20, 'Grande', 24, 'Tímido', 'Negro', 'MACHO', 'CUARENTENA', 'https://storage.teocatcafe.bo/cats/thor-privado.jpg', 'En observación médica.'),
+  ('CAT-PUB-04', 'Bella', 3.80, 'Mediano', 16, 'Sociable', 'Blanco', 'HEMBRA', 'ADOPTADO', 'https://storage.teocatcafe.bo/cats/bella-privada.jpg', 'Adoptada con éxito por una familia.');

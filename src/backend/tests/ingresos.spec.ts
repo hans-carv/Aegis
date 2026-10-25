@@ -8,16 +8,14 @@ describe('SCRUM-19 / Registro de ingreso de gatos y vía de llegada', () => {
   let userToken = '';
 
   beforeAll(async () => {
-    // 1. Obtener token de Administradora (Gisel)
     const adminRes = await request(app)
       .post('/api/auth/login')
       .send({ email: 'admin@teocatcafe.bo', password: 'TeoCat2026*' });
     adminToken = adminRes.body.token;
 
-    // 2. Obtener token de Usuario regular
     const userRes = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'cliente@ucb.edu.bo', password: 'TeoCat2026*' });
+      .send({ email: 'cliente@teocatcafe.bo', password: 'TeoCat2026*' });
     userToken = userRes.body.token;
   }, 15000);
 

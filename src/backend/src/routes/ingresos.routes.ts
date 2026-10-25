@@ -5,7 +5,7 @@ import { authenticateJWT, authorizeRole } from '../middlewares/auth.middleware';
 
 const router = Router();
 
-// Endpoint protegido para registro de felinos
+// Endpoint protegido para registro
 router.post('/', authenticateJWT, authorizeRole('ADMIN'), crearIngresoController);
 router.get('/', authenticateJWT, listarIngresosController);
 

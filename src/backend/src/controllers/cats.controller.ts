@@ -60,4 +60,18 @@ export const actualizarFelinoController = async (req: Request, res: Response): P
     }
     res.status(500).json({ message: 'Error al actualizar el felino.' });
   }
+    
+};
+
+export const catalogoPublicoController = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const catalogo = await CatsService.obtenerCatalogoPublico();
+    res.status(200).json({
+      ok: true,
+      total: catalogo.length,
+      data: catalogo,
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error interno al consultar el catálogo público.' });
+  }
 };
