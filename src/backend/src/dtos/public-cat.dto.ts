@@ -10,4 +10,5 @@ export interface PublicCatResponseDto {
   sexo: string | null;
   historia: string | null;
   estado: string;
+  fotoUrl: string | null;
 }

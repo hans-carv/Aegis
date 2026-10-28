@@ -1,26 +1,23 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import GatoCard, { type EstadoGato } from '../../components/GatoCard'
-import teoFoto from '../../assets/teo.jfif'
-
-type GatoDePrueba = {
-    codigo: string
-    nombre: string
-    peso: number
-    edadMeses: number
-    temperamento: string
-    estado: EstadoGato
-    foto: string
-}
-
-/** Datos locales de prueba */
-const GATOS_DE_PRUEBA: GatoDePrueba[] = [
-    { codigo: 'CAT-001', nombre: 'Luna', peso: 3.2, edadMeses: 18, temperamento: 'Tranquila', estado: 'ADOPCION', foto: teoFoto },
-    { codigo: 'CAT-002', nombre: 'Michi', peso: 2.8, edadMeses: 8, temperamento: 'Juguetón', estado: 'CUARENTENA', foto: teoFoto },
-    { codigo: 'CAT-003', nombre: 'Coco', peso: 4.5, edadMeses: 36, temperamento: 'Sociable', estado: 'ADOPTADO', foto: teoFoto },
-    { codigo: 'CAT-004', nombre: 'Nina', peso: 3.0, edadMeses: 24, temperamento: 'Tímida', estado: 'DISPONIBLE', foto: teoFoto },
-]
+import GatoCard, { type EstadoGato, type SexoGato } from '../../components/GatoCard'
+import { obtenerTodosLosGatos, type GatoCompleto } from '../../services/catsService'
 
 export default function AdminHome() {
+    const [gatos, setGatos] = useState<GatoCompleto[]>([])
+    const [cargando, setCargando] = useState(true)
+
+    useEffect(() => {
+        obtenerTodosLosGatos()
+            .then((data) => {
+                setGatos(data)
+                setCargando(false)
+            })
+            .catch(() => {
+                setCargando(false)
+            })
+    }, [])
+
     return (
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
             <header>
@@ -60,31 +57,56 @@ export default function AdminHome() {
                 </div>
             </section>
 
-            {/* Sección con las tarjetas recicladas */}
+            {/* Sección Felinos en seguimiento */}
             <section aria-labelledby="gatos-prueba-titulo">
                 <div className="flex flex-wrap items-end justify-between gap-2">
                     <h2 id="gatos-prueba-titulo" className="font-heading text-lg font-semibold text-marino">
                         Felinos en seguimiento
                     </h2>
-                    <p className="text-xs font-semibold tracking-wide text-cafe uppercase">Datos de prueba</p>
+                    <p className="text-xs font-semibold tracking-wide text-cafe uppercase">
+                        {cargando ? 'Cargando...' : `${gatos.length} felinos registrados`}
+                    </p>
                 </div>
 
-                <ul className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4" role="list">
-                    {GATOS_DE_PRUEBA.map((gato) => (
-                        <li key={gato.codigo}>
-                            <GatoCard
-                                codigoFelino={gato.codigo}
-                                nombre={gato.nombre}
-                                peso={gato.peso}
-                                edadMeses={gato.edadMeses}
-                                temperamento={gato.temperamento}
-                                estado={gato.estado}
-                                fotoUrl={gato.foto}
-                                modoPublico={false}
-                            />
-                        </li>
-                    ))}
-                </ul>
+                {cargando ? (
+                    <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                        {[1, 2, 3, 4].map((i) => (
+                            <div key={i} className="h-80 animate-pulse rounded-2xl bg-beige/30" />
+                        ))}
+                    </div>
+                ) : gatos.length === 0 ? (
+                    <div className="mt-4 rounded-2xl border border-dashed border-beige bg-white p-8 text-center text-marino/60">
+                        No hay felinos en seguimiento registrados todavía.
+                    </div>
+                ) : (
+                    <ul className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4" role="list">
+                        {gatos.map((gato) => {
+                            const codigo = gato.codigoFelino || (gato as any).codigo_felino || 'CAT-000'
+                            const edad = gato.edadMeses ?? (gato as any).edad_meses ?? 0
+                            const peso = Number(gato.peso) || 0
+                            const foto = gato.fotoUrl || (gato as any).foto_url || undefined
+
+                            return (
+                                <li key={gato.id || codigo}>
+                                    <GatoCard
+                                        codigoFelino={codigo}
+                                        nombre={gato.nombre}
+                                        peso={peso}
+                                        talla={gato.talla || undefined}
+                                        edadMeses={edad}
+                                        temperamento={gato.temperamento || undefined}
+                                        colorPelaje={gato.colorPelaje || (gato as any).color_pelaje || undefined}
+                                        sexo={gato.sexo as SexoGato | undefined}
+                                        estado={gato.estado as EstadoGato}
+                                        fotoUrl={foto}
+                                        historia={gato.historia || undefined}
+                                        modoPublico={false}
+                                    />
+                                </li>
+                            )
+                        })}
+                    </ul>
+                )}
             </section>
         </div>
     )

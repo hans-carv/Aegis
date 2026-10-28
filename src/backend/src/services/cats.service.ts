@@ -187,7 +187,8 @@ export class CatsService {
         color_pelaje,
         sexo,
         historia,
-        estado
+        estado,
+        foto_url
       FROM public.gatos
       WHERE estado = 'DISPONIBLE'
       ORDER BY created_at DESC
@@ -206,6 +207,7 @@ export class CatsService {
       sexo: row.sexo,
       historia: row.historia,
       estado: row.estado,
+      fotoUrl: row.foto_url,
     }));
   }
 }

@@ -42,8 +42,6 @@ describe('SCRUM-36 / Catálogo público y verificación de datos sensibles', () 
     const res = await request(app).get('/api/public/cats');
     const felinos = res.body.data;
     const camposProhibidos = [
-      'foto_url',
-      'fotoUrl',
       'created_by',
       'createdBy',
       'observaciones',

@@ -112,7 +112,7 @@ export default function PublicCatalog() {
                             colorPelaje={gato.colorPelaje || undefined}
                             sexo={gato.sexo as SexoGato | undefined}
                             estado={gato.estado as EstadoGato}
-                            fotoUrl={gato.fotoUrl}
+                            fotoUrl={gato.fotoUrl || (gato as any).foto_url || undefined}
                             historia={gato.historia || undefined}
                             modoPublico={true}
                             onAdoptar={handleAdoptar}
