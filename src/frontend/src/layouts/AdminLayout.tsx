@@ -35,7 +35,6 @@ function FelinosIcon() {
     )
 }
 
-
 function LogoutIcon() {
     return (
         <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
@@ -63,98 +62,63 @@ export default function AdminLayout() {
     const navigate = useNavigate()
     
     function handleLogout() {
-        // Simulación de cierre de sesión
         logout()
         navigate('/login')
     }
 
     return (
         <div className="flex min-h-svh bg-crema font-sans text-marino">
-            <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col justify-between bg-marino text-crema md:flex">
-                <div className="flex items-center gap-3 px-5 py-6">
-                    <img
-                        src={teoLogo}
-                        alt=""
-                        className="h-12 w-12 rounded-2xl object-cover ring-2 ring-celeste/70"
-                    />
-                    <div>
-                        <p className="font-heading text-lg font-semibold tracking-tight">Proyecto Teo</p>
-                        <p className="text-xs text-beige">Panel administrativo</p>
-                    </div>
-                </div>
-
-                <nav className="flex flex-1 flex-col gap-1 px-3" aria-label="Administración">
-                    {navItems.map((item, index) => {
-                        const Icon = icons[index]
-                        return (
-                            <NavLink
-                                key={item.to}
-                                to={item.to}
-                                end={item.end}
-                                className={({ isActive }) => linkClass(isActive, false)}
-                            >
-                                <Icon />
-                                {item.label}
-                            </NavLink>
-                        )
-                    })}
-                </nav>
-
-                {/* Botón de Cerrar Sesión en el Sidebar */}
-                <div className="p-3 border-t border-white/10">
-                <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-beige transition hover:bg-red-500/20 hover:text-red-200"
-                >
-                    <LogoutIcon />
-                    Cerrar sesión
-                </button>
-                </div>
-            </aside>
-
-            <div className="flex min-w-0 flex-1 flex-col">
-                <header className="flex items-center gap-3 bg-marino px-4 py-3 text-crema md:hidden">
-                    <div className="flex items-center gap-3">
-                        <img src={teoLogo} alt="" className="h-10 w-10 rounded-xl object-cover ring-2 ring-celeste/70" />
+            {/* Sidebar Lateral Siempre Visible */}
+            <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col justify-between bg-marino text-crema shadow-lg z-20">
+                <div>
+                    <div className="flex items-center gap-3 px-5 py-6 border-b border-white/10">
+                        <img
+                            src={teoLogo}
+                            alt="Logo Proyecto Teo"
+                            className="h-12 w-12 rounded-2xl object-cover ring-2 ring-celeste/70 shadow-sm"
+                        />
                         <div>
-                            <p className="font-heading text-base font-semibold">Proyecto Teo</p>
-                            <p className="text-[11px] text-beige">Panel administrativo</p>
+                            <p className="font-heading text-lg font-semibold tracking-tight text-crema">Proyecto Teo</p>
+                            <p className="text-xs text-beige">Panel administrativo</p>
                         </div>
                     </div>
+
+                    <nav className="flex flex-col gap-1.5 px-3 py-4" aria-label="Administración">
+                        {navItems.map((item, index) => {
+                            const Icon = icons[index]
+                            return (
+                                <NavLink
+                                    key={item.to}
+                                    to={item.to}
+                                    end={item.end}
+                                    className={({ isActive }) => linkClass(isActive, false)}
+                                >
+                                    <Icon />
+                                    <span>{item.label}</span>
+                                </NavLink>
+                            )
+                        })}
+                    </nav>
+                </div>
+
+                {/* Botón de Cerrar Sesión en el Sidebar */}
+                <div className="p-4 border-t border-white/10">
                     <button
                         type="button"
                         onClick={handleLogout}
-                        title="Cerrar sesión"
-                        className="rounded-lg p-2 text-beige hover:bg-white/10"
+                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-beige transition hover:bg-red-500/20 hover:text-red-200 cursor-pointer"
                     >
                         <LogoutIcon />
-                    </button>                    
-                </header>
+                        <span>Cerrar sesión</span>
+                    </button>
+                </div>
+            </aside>
 
-                <main className="flex-1 px-4 py-6 pb-24 sm:px-6 md:px-8 md:pb-8">
+            {/* Contenedor Principal */}
+            <div className="flex min-w-0 flex-1 flex-col">
+                <main className="flex-1 px-4 py-6 sm:px-6 md:px-8">
                     <Outlet />
                 </main>
-
-                <nav
-                    className="fixed right-0 bottom-0 left-0 z-10 flex border-t border-beige/60 bg-marino px-2 py-1.5 text-crema md:hidden"
-                    aria-label="Administración"
-                >
-                    {navItems.map((item, index) => {
-                        const Icon = icons[index]
-                        return (
-                            <NavLink
-                                key={item.to}
-                                to={item.to}
-                                end={item.end}
-                                className={({ isActive }) => linkClass(isActive, true)}
-                            >
-                                <Icon />
-                                {item.shortLabel}
-                            </NavLink>
-                        )
-                    })}
-                </nav>
             </div>
         </div>
     )

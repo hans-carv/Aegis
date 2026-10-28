@@ -13,12 +13,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Restaurar sesion persistente si existe en localStorage
         const sesionGuardada = localStorage.getItem('teo_user_session')
         const tokenGuardado = localStorage.getItem('teo_auth_token')
-        if (sesionGuardada && tokenGuardado) {
+        if (sesionGuardada) {
             try {
                 const userParsed = JSON.parse(sesionGuardada)
-                userParsed.token = tokenGuardado
+                if (tokenGuardado) {
+                    userParsed.token = tokenGuardado
+                    setAuthToken(tokenGuardado)
+                }
                 setUsuario(userParsed)
-                setAuthToken(tokenGuardado)
             } catch {
                 localStorage.removeItem('teo_user_session')
                 removeAuthToken()
