@@ -1,49 +1,24 @@
 import { Link } from 'react-router'
+import GatoCard, { type EstadoGato } from '../../components/GatoCard'
 import teoFoto from '../../assets/teo.jfif'
 
-type EstadoFelino = 'CUARENTENA' | 'ADOPCION' | 'ADOPTADO'
-
 type GatoDePrueba = {
-  id: string
+  codigo: string
   nombre: string
+  peso: number
   edadMeses: number
-  estado: EstadoFelino
+  temperamento: string
+  estado: EstadoGato
   foto: string
 }
 
-/** Datos locales de prueba. No provienen de la API ni de persistencia real. */
+/** Datos locales de prueba alineados con las props de GatoCard */
 const GATOS_DE_PRUEBA: GatoDePrueba[] = [
-  { id: 'prueba-luna', nombre: 'Luna', edadMeses: 18, estado: 'ADOPCION', foto: teoFoto },
-  { id: 'prueba-michi', nombre: 'Michi', edadMeses: 8, estado: 'CUARENTENA', foto: teoFoto },
-  { id: 'prueba-coco', nombre: 'Coco', edadMeses: 36, estado: 'ADOPTADO', foto: teoFoto },
-  { id: 'prueba-nina', nombre: 'Nina', edadMeses: 24, estado: 'ADOPCION', foto: teoFoto },
+  { codigo: 'CAT-001', nombre: 'Luna', peso: 3.2, edadMeses: 18, temperamento: 'Tranquila', estado: 'ADOPCION', foto: teoFoto },
+  { codigo: 'CAT-002', nombre: 'Michi', peso: 2.8, edadMeses: 8, temperamento: 'Juguetón', estado: 'CUARENTENA', foto: teoFoto },
+  { codigo: 'CAT-003', nombre: 'Coco', peso: 4.5, edadMeses: 36, temperamento: 'Sociable', estado: 'ADOPTADO', foto: teoFoto },
+  { codigo: 'CAT-004', nombre: 'Nina', peso: 3.0, edadMeses: 24, temperamento: 'Tímida', estado: 'DISPONIBLE', foto: teoFoto },
 ]
-
-const ESTADO_ETIQUETA: Record<EstadoFelino, string> = {
-  CUARENTENA: 'En cuarentena',
-  ADOPCION: 'En adopción',
-  ADOPTADO: 'Adoptado',
-}
-
-const ESTADO_ESTILO: Record<EstadoFelino, string> = {
-  CUARENTENA: 'bg-beige text-cafe',
-  ADOPCION: 'bg-celeste/70 text-marino',
-  ADOPTADO: 'bg-marino text-crema',
-}
-
-function formatearEdad(edadMeses: number) {
-  if (edadMeses < 12) {
-    return `${edadMeses} ${edadMeses === 1 ? 'mes' : 'meses'}`
-  }
-
-  const anios = Math.floor(edadMeses / 12)
-  const resto = edadMeses % 12
-  if (resto === 0) {
-    return `${anios} ${anios === 1 ? 'año' : 'años'}`
-  }
-
-  return `${anios} ${anios === 1 ? 'año' : 'años'} y ${resto} ${resto === 1 ? 'mes' : 'meses'}`
-}
 
 export default function AdminHome() {
   return (
@@ -58,6 +33,7 @@ export default function AdminHome() {
         </p>
       </header>
 
+      {/* Accesos rápidos */}
       <section aria-labelledby="accesos-rapidos-titulo">
         <h2 id="accesos-rapidos-titulo" className="font-heading text-lg font-semibold text-marino">
           Accesos rápidos
@@ -65,7 +41,7 @@ export default function AdminHome() {
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <Link
             to="/admin/ingresos"
-            className="rounded-2xl bg-white p-5 shadow-[0_10px_30px_rgba(23,38,65,0.06)] ring-1 ring-beige/70 transition hover:ring-celeste focus-visible:ring-2 focus-visible:ring-celeste focus-visible:outline-none"
+            className="rounded-2xl bg-white p-5 shadow-[0_10px_30px_rgba(23,38,65,0.06)] ring-1 ring-[#D9C3A5]/70 transition hover:ring-[#A9D6E8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A9D6E8]"
           >
             <p className="font-heading text-base font-semibold text-marino">Registrar ingresos</p>
             <p className="mt-1 text-sm text-marino/65">
@@ -74,7 +50,7 @@ export default function AdminHome() {
           </Link>
           <Link
             to="/admin/felinos"
-            className="rounded-2xl bg-white p-5 shadow-[0_10px_30px_rgba(23,38,65,0.06)] ring-1 ring-beige/70 transition hover:ring-celeste focus-visible:ring-2 focus-visible:ring-celeste focus-visible:outline-none"
+            className="rounded-2xl bg-white p-5 shadow-[0_10px_30px_rgba(23,38,65,0.06)] ring-1 ring-[#D9C3A5]/70 transition hover:ring-[#A9D6E8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A9D6E8]"
           >
             <p className="font-heading text-base font-semibold text-marino">Dar de alta felinos</p>
             <p className="mt-1 text-sm text-marino/65">
@@ -84,6 +60,7 @@ export default function AdminHome() {
         </div>
       </section>
 
+      {/* Sección con las tarjetas recicladas */}
       <section aria-labelledby="gatos-prueba-titulo">
         <div className="flex flex-wrap items-end justify-between gap-2">
           <h2 id="gatos-prueba-titulo" className="font-heading text-lg font-semibold text-marino">
@@ -91,26 +68,20 @@ export default function AdminHome() {
           </h2>
           <p className="text-xs font-semibold tracking-wide text-cafe uppercase">Datos de prueba</p>
         </div>
-        <ul className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+
+        <ul className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4" role="list">
           {GATOS_DE_PRUEBA.map((gato) => (
-            <li
-              key={gato.id}
-              className="overflow-hidden rounded-2xl bg-white shadow-[0_10px_30px_rgba(23,38,65,0.06)] ring-1 ring-beige/70"
-            >
-              <img
-                src={gato.foto}
-                alt={`Fotografía de prueba de ${gato.nombre}`}
-                className="h-40 w-full object-cover"
+            <li key={gato.codigo}>
+              <GatoCard
+                codigoFelino={gato.codigo}
+                nombre={gato.nombre}
+                peso={gato.peso}
+                edadMeses={gato.edadMeses}
+                temperamento={gato.temperamento}
+                estado={gato.estado}
+                fotoUrl={gato.foto}
+                modoPublico={false}
               />
-              <div className="flex flex-col gap-2 p-4">
-                <p className="font-heading text-lg font-semibold text-marino">{gato.nombre}</p>
-                <p className="text-sm text-marino/65">{formatearEdad(gato.edadMeses)}</p>
-                <span
-                  className={`inline-flex w-fit rounded-full px-2.5 py-1 text-xs font-semibold ${ESTADO_ESTILO[gato.estado]}`}
-                >
-                  {ESTADO_ETIQUETA[gato.estado]}
-                </span>
-              </div>
             </li>
           ))}
         </ul>
