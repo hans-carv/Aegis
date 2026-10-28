@@ -49,14 +49,18 @@ export class IngresosService {
         };
       }
 
+      const autoCodigo = `CAT-ING-${Date.now().toString().slice(-5)}-${Math.floor(100 + Math.random() * 900)}`;
+      const edadValida = edadMeses && Number(edadMeses) > 0 ? Number(edadMeses) : 1;
       const insertGatoSql = `
-        INSERT INTO gatos (nombre, edad_meses, sexo, color_pelaje)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO public.gatos (codigo_felino, nombre, peso, edad_meses, sexo, color_pelaje, estado)
+        VALUES ($1, $2, $3, $4, $5, $6, 'CUARENTENA')
         RETURNING id
       `;
       const gatoRes = await query(insertGatoSql, [
+        autoCodigo,
         nombreGato.trim(),
-        edadMeses ?? null,
+        1.0,
+        edadValida,
         sexo ?? null,
         colorPelaje ?? null,
       ]);
