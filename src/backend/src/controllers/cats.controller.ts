@@ -33,7 +33,7 @@ export const obtenerFichaFelinoController = async (req: Request, res: Response):
   try {
     const { id } = req.params;
     const rol = req.user?.rol;
-    const felino = await CatsService.obtenerPorIdOCodigo(id, rol);
+    const felino = await CatsService.obtenerPorIdOCodigo(String(id), rol);
     res.status(200).json({ ok: true, data: felino });
   } catch (error: any) {
     if (error.status) {
@@ -47,7 +47,7 @@ export const obtenerFichaFelinoController = async (req: Request, res: Response):
 export const actualizarFelinoController = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const actualizado = await CatsService.actualizarFelino(id, req.body);
+    const actualizado = await CatsService.actualizarFelino(String(id), req.body);
     res.status(200).json({
       ok: true,
       mensaje: 'Ficha técnica actualizada exitosamente.',

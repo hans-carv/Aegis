@@ -3,6 +3,7 @@ export interface Usuario {
     nombre: string
     email: string
     rol: 'ADMIN' | 'USUARIO'
+    token?: string
 }
 
 export interface AuthContextType {

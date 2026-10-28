@@ -253,11 +253,18 @@ export default function Login() {
                             ) : null}
                         </div>
 
+                        {apiError ? (
+                            <div role="alert" className="rounded-xl bg-red-50 p-3 text-sm font-medium text-red-800 ring-1 ring-red-200">
+                                {apiError}
+                            </div>
+                        ) : null}
+
                         <button
                             type="submit"
-                            className="mt-2 h-12 rounded-2xl bg-marino font-sans text-base font-semibold text-crema transition hover:bg-marino/90 focus-visible:ring-2 focus-visible:ring-celeste focus-visible:ring-offset-2 focus-visible:outline-none"
+                            disabled={loading}
+                            className="mt-2 h-12 rounded-2xl bg-marino font-sans text-base font-semibold text-crema transition hover:bg-marino/90 focus-visible:ring-2 focus-visible:ring-celeste focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-70 flex items-center justify-center gap-2"
                         >
-                            Iniciar sesión
+                            {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
                         </button>
                     </form>
                 </section>

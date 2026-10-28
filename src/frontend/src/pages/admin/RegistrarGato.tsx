@@ -1,5 +1,6 @@
 import { useState, useId, useRef, type SubmitEvent, type ReactNode } from 'react'
 import GatoCard, { type EstadoGato, type SexoGato } from '../../components/GatoCard'
+import { crearGato } from '../../services/catsService'
 
 type TallaFelino = 'Pequeño' | 'Mediano' | 'Grande'
 
@@ -103,8 +104,19 @@ export default function AltaFelino() {
         setEnviando(true)
 
         try {
-            // Simulación de llamada API
-            await new Promise((resolve) => setTimeout(resolve, 1200))
+            await crearGato({
+                codigoFelino: valores.codigoFelino.trim(),
+                nombre: valores.nombre.trim(),
+                peso: parseFloat(valores.peso),
+                talla: valores.talla || undefined,
+                edadMeses: parseInt(valores.edadMeses, 10),
+                temperamento: valores.temperamento.trim() || undefined,
+                colorPelaje: valores.colorPelaje.trim() || undefined,
+                sexo: valores.sexo || undefined,
+                estado: valores.estado,
+                fotoUrl: valores.fotoUrl.trim() || undefined,
+                historia: valores.historia.trim() || undefined,
+            })
 
             setNotificacion({
                 tipo: 'exito',
@@ -112,10 +124,10 @@ export default function AltaFelino() {
             })
             setValores(VALORES_INICIALES)
             setErrores({})
-        } catch {
+        } catch (err: any) {
             setNotificacion({
                 tipo: 'error',
-                mensaje: 'Ocurrió un error al intentar registrar el felino. Intenta de nuevo.',
+                mensaje: err?.message || 'Ocurrió un error al intentar registrar el felino. Intenta de nuevo.',
             })
         } finally {
             setEnviando(false)

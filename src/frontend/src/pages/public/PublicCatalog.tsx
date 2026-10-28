@@ -1,85 +1,37 @@
-import { useState, useEffect } from 'react'
-import GatoCard, { type EstadoGato } from '../../components/GatoCard'
-import teoFoto from '../../assets/teo.jfif'
-
-interface FelinoPublico {
-    codigoFelino: string
-    nombre: string
-    peso: number
-    talla: string
-    edadMeses: number
-    temperamento: string
-    colorPelaje: string
-    sexo: 'MACHO' | 'HEMBRA'
-    estado: EstadoGato
-    fotoUrl: string
-    historia: string
-}
-
-/** Datos mock de felinos disponibles para adopción */
-const MOCK_GATOS_DISPONIBLES: FelinoPublico[] = [
-    {
-        codigoFelino: 'CAT-PUB-01',
-        nombre: 'Oliver',
-        peso: 4.1,
-        talla: 'Mediano',
-        edadMeses: 12,
-        temperamento: 'Cariñoso y tranquilo',
-        colorPelaje: 'Naranja',
-        sexo: 'MACHO',
-        estado: 'DISPONIBLE',
-        fotoUrl: teoFoto,
-        historia: 'Rescatado de cachorro, busca un hogar amoroso y paciente.',
-    },
-    {
-        codigoFelino: 'CAT-PUB-02',
-        nombre: 'Mía',
-        peso: 3.5,
-        talla: 'Pequeño',
-        edadMeses: 8,
-        temperamento: 'Juguetona y curiosa',
-        colorPelaje: 'Calicó',
-        sexo: 'HEMBRA',
-        estado: 'DISPONIBLE',
-        fotoUrl: teoFoto,
-        historia: 'Le encantan las pelotas de lana y dormir bajo el sol.',
-    },
-    {
-        codigoFelino: 'CAT-PUB-03',
-        nombre: 'Simba',
-        peso: 3.9,
-        talla: 'Mediano',
-        edadMeses: 24,
-        temperamento: 'Sociable',
-        colorPelaje: 'Rubio',
-        sexo: 'MACHO',
-        estado: 'ADOPCION',
-        fotoUrl: teoFoto,
-        historia: 'Un gato ronroneador que se lleva excelente con otros animales.',
-    },
-]
+import { useState, useEffect, useCallback } from 'react'
+import GatoCard, { type EstadoGato, type SexoGato } from '../../components/GatoCard'
+import { obtenerCatalogoPublico, type FelinoPublico } from '../../services/catsService'
 
 export default function PublicCatalog() {
     const [gatos, setGatos] = useState<FelinoPublico[]>([])
     const [cargando, setCargando] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const [busqueda, setBusqueda] = useState('')
 
-    useEffect(() => {
-        // Simulación de respuesta de API
-        const timer = setTimeout(() => {
-            setGatos(MOCK_GATOS_DISPONIBLES)
+    const cargarGatos = useCallback(async () => {
+        setCargando(true)
+        setError(null)
+        try {
+            const data = await obtenerCatalogoPublico()
+            setGatos(data)
+        } catch (err: any) {
+            setError(err.message || 'No se pudo cargar el catálogo de gatos.')
+        } finally {
             setCargando(false)
-        }, 1000)
-        return () => clearTimeout(timer)
+        }
     }, [])
+
+    useEffect(() => {
+        cargarGatos()
+    }, [cargarGatos])
 
     function handleAdoptar(codigo: string) {
         alert(`¡Gracias por tu interés en adoptar a (${codigo})! Por favor visítanos en Teo Cat Café o comunícate con la administración.`)
     }
 
     const gatosFiltrados = gatos.filter((g) =>
-        g.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-        g.temperamento.toLowerCase().includes(busqueda.toLowerCase())
+        (g.nombre || '').toLowerCase().includes(busqueda.toLowerCase()) ||
+        (g.temperamento || '').toLowerCase().includes(busqueda.toLowerCase())
     )
 
     return (
@@ -110,6 +62,22 @@ export default function PublicCatalog() {
                 </div>
             </header>
 
+            {/* Mensaje de Error */}
+            {error && (
+                <div className="mb-6 flex items-center justify-between rounded-2xl bg-red-50 p-4 text-sm text-red-800 ring-1 ring-red-200">
+                    <div className="flex items-center gap-2">
+                        <span>⚠️</span>
+                        <span>{error}</span>
+                    </div>
+                    <button
+                        onClick={cargarGatos}
+                        className="rounded-lg bg-red-800 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-900 transition"
+                    >
+                        Reintentar
+                    </button>
+                </div>
+            )}
+
             {/* Indicador de Carga (Skeletons) */}
             {cargando ? (
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -137,15 +105,15 @@ export default function PublicCatalog() {
                             key={gato.codigoFelino}
                             codigoFelino={gato.codigoFelino}
                             nombre={gato.nombre}
-                            peso={gato.peso}
-                            talla={gato.talla}
+                            peso={gato.peso || 0}
+                            talla={gato.talla || undefined}
                             edadMeses={gato.edadMeses}
-                            temperamento={gato.temperamento}
-                            colorPelaje={gato.colorPelaje}
-                            sexo={gato.sexo}
-                            estado={gato.estado}
+                            temperamento={gato.temperamento || undefined}
+                            colorPelaje={gato.colorPelaje || undefined}
+                            sexo={gato.sexo as SexoGato | undefined}
+                            estado={gato.estado as EstadoGato}
                             fotoUrl={gato.fotoUrl}
-                            historia={gato.historia}
+                            historia={gato.historia || undefined}
                             modoPublico={true}
                             onAdoptar={handleAdoptar}
                         />

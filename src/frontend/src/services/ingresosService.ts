@@ -1,3 +1,5 @@
+import { apiRequest } from './api'
+
 export type ViaProcedencia = 'RESCATADO' | 'FUNDACION' | 'PARTICULAR'
 export type Sexo = 'MACHO' | 'HEMBRA'
 
@@ -19,19 +21,21 @@ export type GatoOpcion = {
     nombre: string
 }
 
-// con 'true' se simula la conexión al backend; con 'false' se debe implementar la conexión real.
-
-export const MODO_DEMOSTRACION: boolean = true
+// Ahora conectado al servidor en modo real por defecto
+export const MODO_DEMOSTRACION: boolean = false
 
 export class IngresoError extends Error {
     name = 'IngresoError'
+    constructor(mensaje: string) {
+        super(mensaje)
+        this.name = 'IngresoError'
+    }
 }
 
 function esperar(ms: number) {
     return new Promise<void>((resolve) => setTimeout(resolve, ms))
 }
 
-//Gatos de prueba para el selector de gatos. Se usan solo en modo demostración.
 const GATOS_DE_PRUEBA: GatoOpcion[] = [
     { id: 'demo-oliver', codigo: 'CAT-PUB-01', nombre: 'Oliver' },
     { id: 'demo-mia', codigo: 'CAT-PUB-02', nombre: 'Mía' },
@@ -44,17 +48,33 @@ export async function obtenerGatosParaIngreso(): Promise<GatoOpcion[]> {
         await esperar(400)
         return GATOS_DE_PRUEBA
     }
-    throw new IngresoError('La lista de gatos aún no esta conectada al servidor')
+
+    try {
+        const res = await apiRequest<{ ok: boolean; data: any[] }>('/gatos')
+        const gatos = res.data || []
+        return gatos.map((cat: any) => ({
+            id: cat.id,
+            codigo: cat.codigo_felino || cat.codigoFelino || cat.id,
+            nombre: cat.nombre,
+        }))
+    } catch (err: any) {
+        throw new IngresoError(err.message || 'Error al obtener la lista de gatos desde el servidor.')
+    }
 }
 
 export async function enviarIngreso(payload: CreateIngresoPayload): Promise<void> {
     if (MODO_DEMOSTRACION) {
-        // simula la latencia de red
         void payload
         await esperar(900)
         return
     }
 
-    // aca va la implementación real de la conexión al backend para registrar un ingreso
-    throw new IngresoError('La conexión con el servidor aún no esta implementada')
+    try {
+        await apiRequest('/ingresos', {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        })
+    } catch (err: any) {
+        throw new IngresoError(err.message || 'Error al registrar el ingreso en el servidor.')
+    }
 }

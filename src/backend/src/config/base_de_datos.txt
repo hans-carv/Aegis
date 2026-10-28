@@ -1,21 +1,72 @@
-CREATE TABLE IF NOT EXISTS gatos (
+-- =============================================================================
+-- SISTEMA TEO CAT CAFÉ - SCRIPT COMPLETO DE BASE DE DATOS (POSTGRESQL)
+-- =============================================================================
+
+-- 1. Habilitar extensión UUID
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- 2. Tabla: roles
+CREATE TABLE IF NOT EXISTS public.roles (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    nombre VARCHAR(100) NOT NULL,
-    edad_meses INT,
-    color_pelaje VARCHAR(50),
-    sexo VARCHAR(10) CHECK (sexo IN ('MACHO', 'HEMBRA')),
+    nombre VARCHAR(50) NOT NULL UNIQUE
+);
+
+-- Insertar roles base
+INSERT INTO public.roles (nombre)
+VALUES ('ADMIN'), ('USUARIO')
+ON CONFLICT (nombre) DO NOTHING;
+
+-- 3. Tabla: usuarios
+CREATE TABLE IF NOT EXISTS public.usuarios (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    nombre_completo VARCHAR(150) NOT NULL,
+    email VARCHAR(150) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    activo BOOLEAN NOT NULL DEFAULT true,
+    rol_id UUID NOT NULL REFERENCES public.roles(id) ON DELETE RESTRICT,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS ingresos_felinos (
+-- Usuarios iniciales (Password: TeoCat2026*)
+INSERT INTO public.usuarios (nombre_completo, email, password_hash, activo, rol_id)
+SELECT 'Gisel Administradora', 'admin@teocatcafe.bo', '$2b$10$y6MyJhueKU3upPzuFpKvBefNy8ROMznyOWHShgL0d3ukP9AGeCDDu', true, id
+FROM public.roles WHERE nombre = 'ADMIN'
+ON CONFLICT (email) DO NOTHING;
+
+INSERT INTO public.usuarios (nombre_completo, email, password_hash, activo, rol_id)
+SELECT 'Cliente Teo', 'cliente@teocatcafe.bo', '$2b$10$y6MyJhueKU3upPzuFpKvBefNy8ROMznyOWHShgL0d3ukP9AGeCDDu', true, id
+FROM public.roles WHERE nombre = 'USUARIO'
+ON CONFLICT (email) DO NOTHING;
+
+-- 4. Tabla: gatos
+CREATE TABLE IF NOT EXISTS public.gatos (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    gato_id UUID NOT NULL REFERENCES gatos(id) ON DELETE CASCADE,
+    codigo_felino VARCHAR(50) NOT NULL UNIQUE,
+    nombre VARCHAR(100) NOT NULL,
+    peso NUMERIC(5,2) NOT NULL CHECK (peso > 0),
+    talla VARCHAR(20),
+    edad_meses INT NOT NULL CHECK (edad_meses > 0),
+    temperamento VARCHAR(150),
+    color_pelaje VARCHAR(50),
+    sexo VARCHAR(10) CHECK (sexo IN ('MACHO', 'HEMBRA')),
+    estado VARCHAR(20) NOT NULL DEFAULT 'CUARENTENA' CHECK (estado IN ('CUARENTENA', 'DISPONIBLE', 'ADOPCION', 'ADOPTADO')),
+    foto_url TEXT,
+    historia TEXT,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_gatos_codigo_felino ON public.gatos (codigo_felino);
+
+-- 5. Tabla: ingresos_felinos
+CREATE TABLE IF NOT EXISTS public.ingresos_felinos (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    gato_id UUID NOT NULL REFERENCES public.gatos(id) ON DELETE CASCADE,
     via_procedencia VARCHAR(20) NOT NULL CHECK (via_procedencia IN ('RESCATADO', 'FUNDACION', 'PARTICULAR')),
     nombre_institucion VARCHAR(150),
     fecha_derivacion DATE,
     observaciones TEXT,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_by UUID NOT NULL REFERENCES usuarios(id) ON DELETE RESTRICT,
+    created_by UUID NOT NULL REFERENCES public.usuarios(id) ON DELETE RESTRICT,
 
     CONSTRAINT check_fundacion_fields CHECK (
         (via_procedencia = 'FUNDACION' AND nombre_institucion IS NOT NULL AND fecha_derivacion IS NOT NULL)
@@ -23,66 +74,13 @@ CREATE TABLE IF NOT EXISTS ingresos_felinos (
     )
 );
 
-
-
-
-
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
-CREATE TABLE IF NOT EXISTS public.gatos (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    codigo_felino VARCHAR(50) NOT NULL,
-    nombre VARCHAR(100) NOT NULL,
-    peso NUMERIC(5,2) NOT NULL,
-    talla VARCHAR(20),
-    edad_meses INT NOT NULL,
-    temperamento VARCHAR(150),
-    color_pelaje VARCHAR(50),
-    sexo VARCHAR(10) CHECK (sexo IN ('MACHO', 'HEMBRA')),
-    estado VARCHAR(20) NOT NULL DEFAULT 'CUARENTENA' CHECK (estado IN ('CUARENTENA', 'ADOPCION', 'ADOPTADO')),
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uq_gatos_codigo_felino UNIQUE (codigo_felino),
-    CONSTRAINT chk_gatos_peso_positivo CHECK (peso > 0),
-    CONSTRAINT chk_gatos_edad_positiva CHECK (edad_meses > 0)
-);
-
-
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='gatos' AND column_name='codigo_felino') THEN
-        ALTER TABLE public.gatos ADD COLUMN codigo_felino VARCHAR(50) UNIQUE;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='gatos' AND column_name='peso') THEN
-        ALTER TABLE public.gatos ADD COLUMN peso NUMERIC(5,2) CHECK (peso > 0);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='gatos' AND column_name='talla') THEN
-        ALTER TABLE public.gatos ADD COLUMN talla VARCHAR(20);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='gatos' AND column_name='temperamento') THEN
-        ALTER TABLE public.gatos ADD COLUMN temperamento VARCHAR(150);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='gatos' AND column_name='estado') THEN
-        ALTER TABLE public.gatos ADD COLUMN estado VARCHAR(20) NOT NULL DEFAULT 'CUARENTENA' CHECK (estado IN ('CUARENTENA', 'ADOPCION', 'ADOPTADO'));
-    END IF;
-END $$;
-ALTER TABLE public.gatos
-  ADD COLUMN IF NOT EXISTS foto_url TEXT,
-  ADD COLUMN IF NOT EXISTS historia TEXT;
-CREATE INDEX IF NOT EXISTS idx_gatos_codigo_felino ON public.gatos (codigo_felino);
-
-
-
-ALTER TABLE public.gatos DROP CONSTRAINT IF EXISTS gatos_estado_check;
-ALTER TABLE public.gatos 
-  ADD CONSTRAINT gatos_estado_check 
-  CHECK (estado IN ('CUARENTENA', 'DISPONIBLE', 'ADOPCION', 'ADOPTADO'));
-
+-- 6. Semillas de felinos (Catálogo inicial)
 DELETE FROM public.gatos WHERE codigo_felino IN ('CAT-PUB-01', 'CAT-PUB-02', 'CAT-PUB-03', 'CAT-PUB-04');
 
 INSERT INTO public.gatos (
   codigo_felino, nombre, peso, talla, edad_meses, temperamento, color_pelaje, sexo, estado, foto_url, historia
 ) VALUES 
-  ('CAT-PUB-01', 'Oliver', 4.10, 'Mediano', 12, 'Cariñoso y tranquilo', 'Naranja', 'MACHO', 'DISPONIBLE', 'https://storage.teocatcafe.bo/cats/oliver-privado.jpg', 'Rescatado de cachorro, busca un hogar amoroso.'),
-  ('CAT-PUB-02', 'Mía', 3.50, 'Pequeño', 8, 'Juguetona y curiosa', 'Calicó', 'HEMBRA', 'DISPONIBLE', 'https://storage.teocatcafe.bo/cats/mia-privada.jpg', 'Hermana de Oliver, le encantan las pelotas de lana.'),
-  ('CAT-PUB-03', 'Thor', 5.20, 'Grande', 24, 'Tímido', 'Negro', 'MACHO', 'CUARENTENA', 'https://storage.teocatcafe.bo/cats/thor-privado.jpg', 'En observación médica.'),
-  ('CAT-PUB-04', 'Bella', 3.80, 'Mediano', 16, 'Sociable', 'Blanco', 'HEMBRA', 'ADOPTADO', 'https://storage.teocatcafe.bo/cats/bella-privada.jpg', 'Adoptada con éxito por una familia.');
+  ('CAT-PUB-01', 'Oliver', 4.10, 'Mediano', 12, 'Cariñoso y tranquilo', 'Naranja', 'MACHO', 'DISPONIBLE', 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=600&q=80', 'Rescatado de cachorro, busca un hogar amoroso y paciente.'),
+  ('CAT-PUB-02', 'Mía', 3.50, 'Pequeño', 8, 'Juguetona y curiosa', 'Calicó', 'HEMBRA', 'DISPONIBLE', 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?auto=format&fit=crop&w=600&q=80', 'Hermana de Oliver, le encantan las pelotas de lana y dormir al sol.'),
+  ('CAT-PUB-03', 'Thor', 5.20, 'Grande', 24, 'Tímido pero leal', 'Negro', 'MACHO', 'CUARENTENA', 'https://images.unsplash.com/photo-1518791841217-8f162f1e1131?auto=format&fit=crop&w=600&q=80', 'En periodo de observación médica preventiva.'),
+  ('CAT-PUB-04', 'Bella', 3.80, 'Mediano', 16, 'Sociable y activa', 'Blanco', 'HEMBRA', 'ADOPTADO', 'https://images.unsplash.com/photo-1495360010541-f48722b34f7d?auto=format&fit=crop&w=600&q=80', 'Adoptada con éxito por una amorosa familia.');
