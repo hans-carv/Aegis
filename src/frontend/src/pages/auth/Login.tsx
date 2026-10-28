@@ -1,5 +1,6 @@
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { useId, useState, type SubmitEvent } from 'react'
+import { useAuth } from '../../hooks/useAuth'
 import teoLogo from '../../assets/teo.jfif'
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -76,6 +77,11 @@ function EyeIcon({ open }: { open: boolean }) {
 }
 
 export default function Login() {
+    const navigate = useNavigate()
+    const { login } = useAuth()
+    const [apiError, setApiError] = useState('')
+    const [loading, setLoading] = useState(false)
+
     const emailId = useId()
     const passwordId = useId()
     const emailErrorId = useId()
@@ -104,7 +110,7 @@ export default function Login() {
         return nextErrors
     }
 
-    function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
+    async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
         event.preventDefault()
         const nextErrors = validate()
         setErrors(nextErrors)
@@ -114,7 +120,17 @@ export default function Login() {
             return
         }
 
-        // Solo validación de interfaz: no hay autenticación real en esta pantalla.
+        // Ejecución de la simulacion para login
+        setLoading(true)
+        setApiError('')
+        try {
+            await login(email, password)
+            navigate('/admin')
+        } catch (err) {
+            setApiError(err instanceof Error ? err.message : 'Error al iniciar sesión')
+        } finally {
+            setLoading(false)
+        }
     }
 
     return (

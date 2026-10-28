@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router'
+import { useAuth } from '../hooks/useAuth'
 import teoLogo from '../assets/teo.jfif'
 
 const navItems = [
@@ -58,11 +59,12 @@ function linkClass(isActive: boolean, compact: boolean) {
 }
 
 export default function AdminLayout() {
+    const { logout } = useAuth()
     const navigate = useNavigate()
     
     function handleLogout() {
         // Simulación de cierre de sesión
-        localStorage.removeItem('isAuth');
+        logout()
         navigate('/login')
     }
 
