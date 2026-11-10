@@ -62,4 +62,59 @@ export class AuthService {
       return null;
     }
   }
+
+  static async register(nombreCompleto: string, email: string, plainPassword: string): Promise<LoginResult> {
+    const emailNormalizado = email.trim().toLowerCase();
+    const nombreLimpio = nombreCompleto.trim();
+
+    const existeResult = await query(
+      'SELECT id FROM usuarios WHERE LOWER(TRIM(email)) = $1',
+      [emailNormalizado]
+    );
+
+    if (existeResult.rowCount && existeResult.rowCount > 0) {
+      const err: any = new Error('Ya existe una cuenta registrada con este correo electrónico.');
+      err.status = 409;
+      throw err;
+    }
+
+    const rolResult = await query(
+      "SELECT id FROM roles WHERE UPPER(nombre) = 'USUARIO' LIMIT 1"
+    );
+
+    if (rolResult.rowCount === 0) {
+      const err: any = new Error('El rol de usuario no está configurado en el sistema.');
+      err.status = 500;
+      throw err;
+    }
+
+    const rolId = rolResult.rows[0].id;
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(plainPassword, salt);
+    const insertText = `
+      INSERT INTO usuarios (nombre_completo, email, password_hash, rol_id, activo)
+      VALUES ($1, $2, $3, $4, true)
+      RETURNING id, nombre_completo
+    `;
+    const nuevoUsuarioResult = await query(insertText, [
+      nombreLimpio,
+      emailNormalizado,
+      passwordHash,
+      rolId,
+    ]);
+
+    const nuevoUsuario = nuevoUsuarioResult.rows[0];
+
+    const payload: UserSessionPayload = {
+      id: nuevoUsuario.id,
+      nombre: nuevoUsuario.nombre_completo,
+      rol: 'USUARIO',
+    };
+
+    const secret = process.env.JWT_SECRET || 'aegis_teocat_super_secret_key_2026';
+    const expiresIn = (process.env.JWT_EXPIRES_IN || '4h') as any;
+    const token = jwt.sign(payload, secret, { expiresIn });
+
+    return { token, user: payload };
+  }
 }
