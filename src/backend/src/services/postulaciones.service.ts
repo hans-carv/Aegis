@@ -2,6 +2,9 @@ import { pool, query } from '../config/db';
 import { CreatePostulacionDto } from '../dtos/postulacion.dto';
 
 export class PostulacionesService {
+  /**
+   * HU: Registro inmutable de postulación de adopción
+   */
   static async crearPostulacion(usuarioId: string, dto: CreatePostulacionDto) {
     const { gatoId, presupuestoMensual, telefonoContacto, direccionDomicilio, cuestionario } = dto;
 
@@ -28,6 +31,8 @@ export class PostulacionesService {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
+
+      // Consultar usando la columna 'estado' existente en public.gatos
       const gatoRes = await client.query(
         'SELECT id, nombre, estado FROM public.gatos WHERE id = $1 FOR UPDATE',
         [gatoId]
@@ -40,10 +45,11 @@ export class PostulacionesService {
       const gato = gatoRes.rows[0];
       const estadoGato = String(gato.estado).trim().toUpperCase();
 
+      // Criterio de exclusión: Únicamente puede postularse si está DISPONIBLE
       if (estadoGato !== 'DISPONIBLE') {
         throw {
           status: 409,
-          message: `El felino ${gato.nombre} no se encuentra disponible para adopción (estado actual: ${estadoGato}).`,
+          message: `El felino ${gato.nombre} no se encuentra disponible (estado actual: ${estadoGato}).`,
         };
       }
 
@@ -124,5 +130,96 @@ export class PostulacionesService {
 
     const res = await query(sql, params);
     return res.rows;
+  }
+
+  /**
+   * SCRUM-62: Cancelación voluntaria o administrativa con motivo obligatorio y liberación atómica del gato
+   */
+  static async cancelarPostulacion(
+    postulacionId: string,
+    usuarioId: string,
+    rolUsuario: string | undefined,
+    motivo: string
+  ) {
+    // DoD 2: Rechazo si se omite el motivo
+    if (!motivo || typeof motivo !== 'string' || motivo.trim().length === 0) {
+      throw {
+        status: 400,
+        message: 'Debe indicar obligatoriamente el motivo de cancelación de la solicitud.',
+      };
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const postRes = await client.query(
+        'SELECT id, usuario_id, gato_id, estado FROM public.postulaciones_adopcion WHERE id = $1 FOR UPDATE',
+        [postulacionId]
+      );
+
+      if (postRes.rows.length === 0) {
+        throw { status: 404, message: 'La postulación no existe.' };
+      }
+
+      const post = postRes.rows[0];
+
+      // DoD 4: El usuario solo puede cancelar sus postulaciones, a menos que sea ADMIN
+      if (rolUsuario !== 'ADMIN' && post.usuario_id !== usuarioId) {
+        throw {
+          status: 403,
+          message: 'Acceso denegado: No tienes autorización para cancelar la postulación de otro usuario.',
+        };
+      }
+
+      // DoD 3: No se puede cancelar si ya fue aprobada o tiene contrato firmado
+      const estadoPost = String(post.estado).toUpperCase();
+      if (estadoPost === 'APROBADA' || estadoPost === 'APROBADA_FINALIZADA') {
+        throw {
+          status: 409,
+          message: 'Conflicto: No se puede cancelar una postulación que ya cuenta con contrato firmado o ha sido formalmente aprobada.',
+        };
+      }
+
+      if (estadoPost === 'CANCELADA') {
+        throw {
+          status: 400,
+          message: 'La postulación ya se encuentra en estado CANCELADA.',
+        };
+      }
+
+      // 1. Cancelar postulación registrando auditoría (SCRUM-64)
+      const updatePostSql = `
+        UPDATE public.postulaciones_adopcion
+        SET 
+          estado = 'CANCELADA',
+          motivo_baja = $1,
+          cancelado_por = $2,
+          fecha_baja = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $3
+        RETURNING id, estado, motivo_baja, cancelado_por, fecha_baja;
+      `;
+      const updatedPostRes = await client.query(updatePostSql, [motivo.trim(), usuarioId, postulacionId]);
+
+      // 2. Liberación inmediata del felino a estado DISPONIBLE
+      await client.query(
+        "UPDATE public.gatos SET estado = 'DISPONIBLE' WHERE id = $1",
+        [post.gato_id]
+      );
+
+      await client.query('COMMIT');
+
+      return {
+        postulacion: updatedPostRes.rows[0],
+        gatoLiberadoId: post.gato_id,
+        mensaje: 'Postulación cancelada con éxito y felino retornado al catálogo disponible.',
+      };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 }
