@@ -97,3 +97,24 @@ CREATE TABLE IF NOT EXISTS public.postulaciones_adopcion (
 CREATE INDEX IF NOT EXISTS idx_postulaciones_gato_id ON public.postulaciones_adopcion(gato_id);
 CREATE INDEX IF NOT EXISTS idx_postulaciones_usuario_id ON public.postulaciones_adopcion(usuario_id);
 CREATE INDEX IF NOT EXISTS idx_postulaciones_estado ON public.postulaciones_adopcion(estado);
+
+-- Agregar flag de verificación documental en postulaciones_adopcion
+ALTER TABLE public.postulaciones_adopcion 
+ADD COLUMN IF NOT EXISTS documentacion_completa BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- Tabla para almacenar los metadatos criptográficos de los archivos
+CREATE TABLE IF NOT EXISTS public.documentos_postulacion (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    postulacion_id UUID NOT NULL REFERENCES public.postulaciones_adopcion(id) ON DELETE CASCADE,
+    tipo_documento VARCHAR(50) NOT NULL CHECK (tipo_documento IN ('CARNET_IDENTIDAD', 'FACTURA_SERVICIO', 'CROQUIS_DOMICILIO')),
+    nombre_archivo_original VARCHAR(255) NOT NULL,
+    mime_type VARCHAR(100) NOT NULL,
+    ruta_cifrada TEXT NOT NULL,
+    iv_vector VARCHAR(64) NOT NULL,
+    hash_sha256 VARCHAR(64) NOT NULL,
+    tamano_bytes BIGINT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_postulacion_tipo_documento UNIQUE (postulacion_id, tipo_documento)
+);
+
+CREATE INDEX IF NOT EXISTS idx_documentos_postulacion_id ON public.documentos_postulacion(postulacion_id);
