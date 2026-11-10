@@ -80,3 +80,20 @@ VALUES
   ('LUNES', '11:30:00', '13:30:00', 8, TRUE),
   ('LUNES', '15:00:00', '17:00:00', 6, TRUE),
   ('MARTES', '09:00:00', '11:00:00', 8, TRUE);
+
+CREATE TABLE IF NOT EXISTS public.postulaciones_adopcion (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    usuario_id UUID NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE,
+    gato_id UUID NOT NULL REFERENCES public.gatos(id) ON DELETE RESTRICT,
+    estado VARCHAR(20) NOT NULL DEFAULT 'EN_REVISION' CHECK (estado IN ('EN_REVISION', 'APROBADA', 'RECHAZADA', 'CANCELADA')),
+    cuestionario_vivienda JSONB NOT NULL,
+    presupuesto_mensual NUMERIC(10, 2) NOT NULL CHECK (presupuesto_mensual > 0),
+    telefono_contacto VARCHAR(20) NOT NULL,
+    direccion_domicilio VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_postulaciones_gato_id ON public.postulaciones_adopcion(gato_id);
+CREATE INDEX IF NOT EXISTS idx_postulaciones_usuario_id ON public.postulaciones_adopcion(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_postulaciones_estado ON public.postulaciones_adopcion(estado);
