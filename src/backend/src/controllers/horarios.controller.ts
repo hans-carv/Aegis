@@ -1,3 +1,4 @@
+// src/controllers/horarios.controller.ts
 import { Request, Response } from 'express';
 import { HorariosService } from '../services/horarios.service';
 
@@ -16,7 +17,7 @@ export const crearHorarioController = async (req: Request, res: Response): Promi
 
 export const actualizarHorarioController = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : (req.params.id as string);
     const actualizada = await HorariosService.actualizarFranja(id, req.body);
     res.status(200).json({
       ok: true,
