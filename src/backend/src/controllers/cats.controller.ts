@@ -31,9 +31,9 @@ export const listarFelinosController = async (req: Request, res: Response): Prom
 
 export const obtenerFichaFelinoController = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : (req.params.id as string);
     const rol = req.user?.rol;
-    const felino = await CatsService.obtenerPorIdOCodigo(String(id), rol);
+    const felino = await CatsService.obtenerPorIdOCodigo(id, rol);
     res.status(200).json({ ok: true, data: felino });
   } catch (error: any) {
     if (error.status) {
@@ -46,8 +46,8 @@ export const obtenerFichaFelinoController = async (req: Request, res: Response):
 
 export const actualizarFelinoController = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
-    const actualizado = await CatsService.actualizarFelino(String(id), req.body);
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : (req.params.id as string);
+    const actualizado = await CatsService.actualizarFelino(id, req.body);
     res.status(200).json({
       ok: true,
       mensaje: 'Ficha técnica actualizada exitosamente.',
@@ -60,7 +60,6 @@ export const actualizarFelinoController = async (req: Request, res: Response): P
     }
     res.status(500).json({ message: 'Error al actualizar el felino.' });
   }
-    
 };
 
 export const catalogoPublicoController = async (_req: Request, res: Response): Promise<void> => {

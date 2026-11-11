@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
+import teoFoto from '../assets/teo.jfif'
 
 export type EstadoGato = 'CUARENTENA' | 'DISPONIBLE' | 'ADOPCION' | 'ADOPTADO'
 export type SexoGato = 'MACHO' | 'HEMBRA'
@@ -15,7 +16,6 @@ export interface GatoCardProps {
     estado: EstadoGato
     fotoUrl?: string
     historia?: string
-    /** Si se activa el modo público, se muestra el botón "Adoptar" o de postulación */
     modoPublico?: boolean
     onAdoptar?: (codigoFelino: string) => void
     accionesAdmin?: ReactNode
@@ -69,28 +69,27 @@ export default function GatoCard({
     accionesAdmin,
 }: GatoCardProps) {
     const infoEstado = ESTADO_CONFIG[estado] || ESTADO_CONFIG.CUARENTENA
+    const [imgSrc, setImgSrc] = useState<string>(fotoUrl || teoFoto)
+
+    useEffect(() => {
+        setImgSrc(fotoUrl || teoFoto)
+    }, [fotoUrl])
 
     return (
         <article className="group flex flex-col overflow-hidden rounded-2xl bg-white shadow-[0_10px_30px_rgba(23,38,65,0.06)] ring-1 ring-[#D9C3A5]/60 transition-all hover:shadow-md">
             {/* Imagen / Placeholder */}
             <div className="relative h-48 w-full overflow-hidden bg-crema">
-                {fotoUrl ? (
-                    <img
-                        src={fotoUrl}
-                        alt={`Fotografía de ${nombre}`}
-                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        loading="lazy"
-                    />
-                ) : (
-                    <div className="flex h-full flex-col items-center justify-center gap-2 text-marino/40">
-                        <svg className="h-12 w-12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                            <path d="M12 5c-4 0-7 3-7 7s3 7 7 7 7-3 7-7-3-7-7-7Z" />
-                            <circle cx="9" cy="11" r="1" fill="currentColor" />
-                            <circle cx="15" cy="11" r="1" fill="currentColor" />
-                        </svg>
-                        <span className="text-xs font-semibold">Sin imagen</span>
-                    </div>
-                )}
+                <img
+                    src={imgSrc}
+                    alt={`Fotografía de ${nombre}`}
+                    onError={() => {
+                        if (imgSrc !== teoFoto) {
+                            setImgSrc(teoFoto)
+                        }
+                    }}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    loading="lazy"
+                />
 
                 {/* Badge de Código y Estado */}
                 <div className="absolute top-3 right-3 left-3 flex items-center justify-between gap-2">
@@ -143,7 +142,7 @@ export default function GatoCard({
 
                     {historia && (
                         <p className="line-clamp-2 text-xs text-marino/70 italic">
-                            "{historia}"
+                            &ldquo;{historia}&rdquo;
                         </p>
                     )}
                 </div>

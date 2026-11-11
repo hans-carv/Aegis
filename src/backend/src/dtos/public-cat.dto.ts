@@ -3,6 +3,7 @@ export interface PublicCatResponseDto {
   id: string;
   codigoFelino: string;
   nombre: string;
+  peso: number;
   edadMeses: number;
   temperamento: string | null;
   talla: string | null;

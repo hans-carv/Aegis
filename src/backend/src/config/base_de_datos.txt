@@ -43,9 +43,9 @@ CREATE TABLE IF NOT EXISTS public.gatos (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     codigo_felino VARCHAR(50) NOT NULL UNIQUE,
     nombre VARCHAR(100) NOT NULL,
-    peso NUMERIC(5,2) NOT NULL CHECK (peso > 0),
+    peso NUMERIC(5,2) NOT NULL DEFAULT 1.0 CHECK (peso > 0),
     talla VARCHAR(20),
-    edad_meses INT NOT NULL CHECK (edad_meses > 0),
+    edad_meses INT NOT NULL DEFAULT 12 CHECK (edad_meses > 0),
     temperamento VARCHAR(150),
     color_pelaje VARCHAR(50),
     sexo VARCHAR(10) CHECK (sexo IN ('MACHO', 'HEMBRA')),
@@ -67,20 +67,98 @@ CREATE TABLE IF NOT EXISTS public.ingresos_felinos (
     observaciones TEXT,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by UUID NOT NULL REFERENCES public.usuarios(id) ON DELETE RESTRICT,
-
     CONSTRAINT check_fundacion_fields CHECK (
         (via_procedencia = 'FUNDACION' AND nombre_institucion IS NOT NULL AND fecha_derivacion IS NOT NULL)
         OR (via_procedencia <> 'FUNDACION')
     )
 );
 
--- 6. Semillas de felinos (Catálogo inicial)
-DELETE FROM public.gatos WHERE codigo_felino IN ('CAT-PUB-01', 'CAT-PUB-02', 'CAT-PUB-03', 'CAT-PUB-04');
-
+-- Semillas de felinos (Catálogo inicial con fotos)
 INSERT INTO public.gatos (
   codigo_felino, nombre, peso, talla, edad_meses, temperamento, color_pelaje, sexo, estado, foto_url, historia
 ) VALUES 
   ('CAT-PUB-01', 'Oliver', 4.10, 'Mediano', 12, 'Cariñoso y tranquilo', 'Naranja', 'MACHO', 'DISPONIBLE', 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=600&q=80', 'Rescatado de cachorro, busca un hogar amoroso y paciente.'),
   ('CAT-PUB-02', 'Mía', 3.50, 'Pequeño', 8, 'Juguetona y curiosa', 'Calicó', 'HEMBRA', 'DISPONIBLE', 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?auto=format&fit=crop&w=600&q=80', 'Hermana de Oliver, le encantan las pelotas de lana y dormir al sol.'),
   ('CAT-PUB-03', 'Thor', 5.20, 'Grande', 24, 'Tímido pero leal', 'Negro', 'MACHO', 'CUARENTENA', 'https://images.unsplash.com/photo-1518791841217-8f162f1e1131?auto=format&fit=crop&w=600&q=80', 'En periodo de observación médica preventiva.'),
-  ('CAT-PUB-04', 'Bella', 3.80, 'Mediano', 16, 'Sociable y activa', 'Blanco', 'HEMBRA', 'ADOPTADO', 'https://images.unsplash.com/photo-1495360010541-f48722b34f7d?auto=format&fit=crop&w=600&q=80', 'Adoptada con éxito por una amorosa familia.');
+  ('CAT-PUB-04', 'Bella', 3.80, 'Mediano', 16, 'Sociable y activa', 'Blanco', 'HEMBRA', 'ADOPTADO', 'https://images.unsplash.com/photo-1495360010541-f48722b34f7d?auto=format&fit=crop&w=600&q=80', 'Adoptada con éxito por una amorosa familia.')
+ON CONFLICT (codigo_felino) DO NOTHING;
+
+-- 6. Tabla: franjas_horarias (SCRUM 38)
+CREATE TABLE IF NOT EXISTS public.franjas_horarias (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    dia_semana VARCHAR(10) NOT NULL CHECK (dia_semana IN ('LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO')),
+    hora_inicio TIME NOT NULL,
+    hora_fin TIME NOT NULL,
+    aforo_maximo INTEGER NOT NULL CHECK (aforo_maximo > 0),
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+    motivo_bloqueo VARCHAR(255) NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_rango_horario CHECK (hora_inicio < hora_fin)
+);
+
+CREATE INDEX IF NOT EXISTS idx_franjas_dia_horario ON public.franjas_horarias (dia_semana, hora_inicio, hora_fin) WHERE activo = TRUE;
+
+INSERT INTO public.franjas_horarias (dia_semana, hora_inicio, hora_fin, aforo_maximo, activo)
+VALUES 
+  ('LUNES', '09:00:00', '11:00:00', 8, TRUE),
+  ('LUNES', '11:30:00', '13:30:00', 8, TRUE),
+  ('LUNES', '15:00:00', '17:00:00', 6, TRUE),
+  ('MARTES', '09:00:00', '11:00:00', 8, TRUE)
+ON CONFLICT DO NOTHING;
+
+-- 7. Tabla: reservas_visita (SCRUM 43)
+CREATE TABLE IF NOT EXISTS public.reservas_visita (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    usuario_id UUID NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE,
+    franja_id UUID NOT NULL REFERENCES public.franjas_horarias(id) ON DELETE RESTRICT,
+    fecha_reserva DATE NOT NULL,
+    cantidad_personas INTEGER NOT NULL DEFAULT 1 CHECK (cantidad_personas > 0),
+    estado VARCHAR(20) NOT NULL DEFAULT 'CONFIRMADA' CHECK (estado IN ('CONFIRMADA', 'CANCELADA', 'COMPLETADA')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_usuario_franja_fecha UNIQUE (usuario_id, franja_id, fecha_reserva)
+);
+
+CREATE INDEX IF NOT EXISTS idx_reservas_franja_fecha 
+ON public.reservas_visita (franja_id, fecha_reserva) 
+WHERE estado = 'CONFIRMADA';
+
+-- 8. Tabla: postulaciones_adopcion (SCRUM 44 & 61)
+CREATE TABLE IF NOT EXISTS public.postulaciones_adopcion (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    usuario_id UUID NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE,
+    gato_id UUID NOT NULL REFERENCES public.gatos(id) ON DELETE RESTRICT,
+    estado VARCHAR(20) NOT NULL DEFAULT 'EN_REVISION' CHECK (estado IN ('EN_REVISION', 'APROBADA', 'RECHAZADA', 'CANCELADA')),
+    cuestionario_vivienda JSONB NOT NULL,
+    presupuesto_mensual NUMERIC(10, 2) NOT NULL CHECK (presupuesto_mensual > 0),
+    telefono_contacto VARCHAR(20) NOT NULL,
+    direccion_domicilio VARCHAR(255) NOT NULL,
+    documentacion_completa BOOLEAN NOT NULL DEFAULT FALSE,
+    motivo_baja TEXT,
+    cancelado_por UUID REFERENCES public.usuarios(id),
+    fecha_baja TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_postulaciones_gato_id ON public.postulaciones_adopcion(gato_id);
+CREATE INDEX IF NOT EXISTS idx_postulaciones_usuario_id ON public.postulaciones_adopcion(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_postulaciones_estado ON public.postulaciones_adopcion(estado);
+
+-- 9. Tabla: documentos_postulacion (SCRUM 61)
+CREATE TABLE IF NOT EXISTS public.documentos_postulacion (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    postulacion_id UUID NOT NULL REFERENCES public.postulaciones_adopcion(id) ON DELETE CASCADE,
+    tipo_documento VARCHAR(50) NOT NULL CHECK (tipo_documento IN ('CARNET_IDENTIDAD', 'FACTURA_SERVICIO', 'CROQUIS_DOMICILIO')),
+    nombre_archivo_original VARCHAR(255) NOT NULL,
+    mime_type VARCHAR(100) NOT NULL,
+    ruta_cifrada TEXT NOT NULL,
+    iv_vector VARCHAR(64) NOT NULL,
+    hash_sha256 VARCHAR(64) NOT NULL,
+    tamano_bytes BIGINT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_postulacion_tipo_documento UNIQUE (postulacion_id, tipo_documento)
+);
+
+CREATE INDEX IF NOT EXISTS idx_documentos_postulacion_id ON public.documentos_postulacion(postulacion_id);

@@ -1,5 +1,4 @@
-import { apiRequest } from './api'
-
+// src/services/ingresosService.ts
 export type ViaProcedencia = 'RESCATADO' | 'FUNDACION' | 'PARTICULAR'
 export type Sexo = 'MACHO' | 'HEMBRA'
 
@@ -19,62 +18,95 @@ export type GatoOpcion = {
     id: string
     codigo: string
     nombre: string
+    peso?: number
+    talla?: string
+    edadMeses?: number
+    temperamento?: string
+    colorPelaje?: string
+    sexo?: Sexo
+    estado?: string
+    fotoUrl?: string
+    historia?: string
 }
 
-// Ahora conectado al servidor en modo real por defecto
+// Desactivamos la simulación para ir a la base de datos real
 export const MODO_DEMOSTRACION: boolean = false
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 
 export class IngresoError extends Error {
     name = 'IngresoError'
     constructor(mensaje: string) {
         super(mensaje)
-        this.name = 'IngresoError'
     }
 }
 
-function esperar(ms: number) {
-    return new Promise<void>((resolve) => setTimeout(resolve, ms))
+function obtenerToken(): string | null {
+    return localStorage.getItem('teo_auth_token')
 }
 
-const GATOS_DE_PRUEBA: GatoOpcion[] = [
-    { id: 'demo-oliver', codigo: 'CAT-PUB-01', nombre: 'Oliver' },
-    { id: 'demo-mia', codigo: 'CAT-PUB-02', nombre: 'Mía' },
-    { id: 'demo-thor', codigo: 'CAT-PUB-03', nombre: 'Thor' },
-    { id: 'demo-bella', codigo: 'CAT-PUB-04', nombre: 'Bella' },
-]
-
+/**
+ * Consulta la lista real de gatos dados de alta en PostgreSQL (GET /api/gatos)
+ */
 export async function obtenerGatosParaIngreso(): Promise<GatoOpcion[]> {
-    if (MODO_DEMOSTRACION) {
-        await esperar(400)
-        return GATOS_DE_PRUEBA
-    }
-
     try {
-        const res = await apiRequest<{ ok: boolean; data: any[] }>('/gatos')
-        const gatos = res.data || []
-        return gatos.map((cat: any) => ({
-            id: cat.id,
-            codigo: cat.codigo_felino || cat.codigoFelino || cat.id,
-            nombre: cat.nombre,
+        const token = obtenerToken()
+        const response = await fetch(`${API_URL}/gatos`, {
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+        })
+
+        if (!response.ok) {
+            throw new IngresoError(`Error ${response.status}: no se pudo cargar la lista de felinos.`)
+        }
+
+        const json = await response.json()
+        const lista = json.data || []
+
+        return lista.map((g: any) => ({
+            id: g.id,
+            codigo: g.codigo_felino,
+            nombre: g.nombre,
+            peso: Number(g.peso),
+            talla: g.talla,
+            edadMeses: g.edad_meses,
+            temperamento: g.temperamento,
+            colorPelaje: g.color_pelaje,
+            sexo: g.sexo,
+            estado: g.estado,
+            fotoUrl: g.foto_url,
+            historia: g.historia,
         }))
     } catch (err: any) {
-        throw new IngresoError(err.message || 'Error al obtener la lista de gatos desde el servidor.')
+        if (err instanceof IngresoError) throw err
+        throw new IngresoError(err.message || 'Error de conexión con el servidor')
     }
 }
 
+/**
+ * Registra formalmente el ingreso en la base de datos (POST /api/ingresos)
+ */
 export async function enviarIngreso(payload: CreateIngresoPayload): Promise<void> {
-    if (MODO_DEMOSTRACION) {
-        void payload
-        await esperar(900)
-        return
-    }
-
     try {
-        await apiRequest('/ingresos', {
+        const token = obtenerToken()
+        const response = await fetch(`${API_URL}/ingresos`, {
             method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
             body: JSON.stringify(payload),
         })
+
+        const resData = await response.json()
+
+        if (!response.ok) {
+            throw new IngresoError(resData.message || `Error al guardar el ingreso (${response.status})`)
+        }
     } catch (err: any) {
-        throw new IngresoError(err.message || 'Error al registrar el ingreso en el servidor.')
+        if (err instanceof IngresoError) throw err
+        throw new IngresoError(err.message || 'Error de conexión al registrar el ingreso')
     }
 }

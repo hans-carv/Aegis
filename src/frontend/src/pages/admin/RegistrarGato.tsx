@@ -1,6 +1,9 @@
 import { useState, useId, useRef, type SubmitEvent, type ReactNode } from 'react'
+import { useNavigate } from 'react-router'
 import GatoCard, { type EstadoGato, type SexoGato } from '../../components/GatoCard'
-import { crearGato } from '../../services/catsService'
+import { useAuth } from '../../hooks/useAuth'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 
 type TallaFelino = 'Pequeño' | 'Mediano' | 'Grande'
 
@@ -19,7 +22,12 @@ interface ValoresFormulario {
 }
 
 type ErroresFormulario = Partial<Record<keyof ValoresFormulario, string>>
-type Notificacion = { tipo: 'exito' | 'error'; mensaje: string }
+type Notificacion = {
+    tipo: 'exito' | 'error'
+    mensaje: string
+    gatoIdCreado?: string
+    codigoCreado?: string
+}
 
 const VALORES_INICIALES: ValoresFormulario = {
     codigoFelino: '',
@@ -36,6 +44,8 @@ const VALORES_INICIALES: ValoresFormulario = {
 }
 
 export default function AltaFelino() {
+    const navigate = useNavigate()
+    const { token } = useAuth()
     const [valores, setValores] = useState<ValoresFormulario>(VALORES_INICIALES)
     const [errores, setErrores] = useState<ErroresFormulario>({})
     const [enviando, setEnviando] = useState(false)
@@ -43,7 +53,6 @@ export default function AltaFelino() {
 
     const botonRef = useRef<HTMLButtonElement>(null)
 
-    // Generador sugerido de código único
     function generarCodigo() {
         const num = Math.floor(100 + Math.random() * 900)
         setValores((prev) => ({ ...prev, codigoFelino: `CAT-TEO-${num}` }))
@@ -53,7 +62,12 @@ export default function AltaFelino() {
     function validar(v: ValoresFormulario): ErroresFormulario {
         const err: ErroresFormulario = {}
 
-        if (!v.codigoFelino.trim()) err.codigoFelino = 'El código único es obligatorio.'
+        if (!v.codigoFelino.trim()) {
+            err.codigoFelino = 'El código único es obligatorio.'
+        } else if (!/^[a-zA-Z0-9-_]+$/.test(v.codigoFelino.trim())) {
+            err.codigoFelino = 'El código solo puede contener letras, números y guiones.'
+        }
+
         if (!v.nombre.trim()) err.nombre = 'El nombre del felino es obligatorio.'
 
         const pesoNum = parseFloat(v.peso)
@@ -104,8 +118,10 @@ export default function AltaFelino() {
         setEnviando(true)
 
         try {
-            await crearGato({
-                codigoFelino: valores.codigoFelino.trim(),
+            const authToken = token || localStorage.getItem('teo_auth_token')
+
+            const payload = {
+                codigoFelino: valores.codigoFelino.trim().toUpperCase(),
                 nombre: valores.nombre.trim(),
                 peso: parseFloat(valores.peso),
                 talla: valores.talla || undefined,
@@ -116,18 +132,51 @@ export default function AltaFelino() {
                 estado: valores.estado,
                 fotoUrl: valores.fotoUrl.trim() || undefined,
                 historia: valores.historia.trim() || undefined,
+            }
+
+            const response = await fetch(`${API_URL}/gatos`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+                },
+                body: JSON.stringify(payload),
             })
 
+            const resData = await response.json()
+
+            if (!response.ok) {
+                // Manejo del 409 Conflict (código duplicado)
+                if (response.status === 409) {
+                    setErrores((prev) => ({
+                        ...prev,
+                        codigoFelino: resData.message || 'Este código felino ya existe en el sistema.',
+                    }))
+                    setNotificacion({
+                        tipo: 'error',
+                        mensaje: resData.message || 'El código ya se encuentra en uso. Genera o ingresa otro.',
+                    })
+                    return
+                }
+
+                throw new Error(resData.message || `Error del servidor (${response.status})`)
+            }
+
+            // Registro exitoso
+            const gatoCreado = resData.data
             setNotificacion({
                 tipo: 'exito',
-                mensaje: `¡Felino "${valores.nombre}" (${valores.codigoFelino}) registrado exitosamente!`,
+                mensaje: `¡Felino "${gatoCreado.nombre}" (${gatoCreado.codigo_felino}) registrado exitosamente!`,
+                gatoIdCreado: gatoCreado.id,
+                codigoCreado: gatoCreado.codigo_felino,
             })
+
             setValores(VALORES_INICIALES)
             setErrores({})
         } catch (err: any) {
             setNotificacion({
                 tipo: 'error',
-                mensaje: err?.message || 'Ocurrió un error al intentar registrar el felino. Intenta de nuevo.',
+                mensaje: err.message || 'Ocurrió un error al intentar registrar el felino. Intenta de nuevo.',
             })
         } finally {
             setEnviando(false)
@@ -142,7 +191,7 @@ export default function AltaFelino() {
                     Alta de Felino
                 </h1>
                 <p className="mt-1 text-sm text-marino/70 sm:text-base">
-                    Registra un nuevo gato en el sistema para su seguimiento médico, de cuarentena o catálogo de adopción.
+                    Registra un nuevo gato en el sistema para su ficha médica, de cuarentena o catálogo de adopción.
                 </p>
             </header>
 
@@ -170,7 +219,7 @@ export default function AltaFelino() {
                                         <button
                                             type="button"
                                             onClick={generarCodigo}
-                                            className="shrink-0 rounded-xl bg-crema px-3 py-2 text-xs font-bold text-cafe border border-beige hover:bg-beige/20"
+                                            className="shrink-0 rounded-xl bg-crema px-3 py-2 text-xs font-bold text-cafe border border-beige hover:bg-beige/20 transition cursor-pointer"
                                         >
                                             Generar
                                         </button>
@@ -199,7 +248,7 @@ export default function AltaFelino() {
                                         onChange={(e) => actualizarCampo('estado', e.target.value as EstadoGato)}
                                         className="w-full rounded-xl border border-marino/40 bg-white px-3.5 py-2.5 text-sm text-marino outline-none focus:border-marino focus:ring-2 focus:ring-[#A9D6E8]"
                                     >
-                                        <option value="CUARENTENA">Cuarentena</option>
+                                        <option value="CUARENTENA">Cuarentena (Por defecto)</option>
                                         <option value="DISPONIBLE">Disponible</option>
                                         <option value="ADOPCION">En Adopción</option>
                                         <option value="ADOPTADO">Adoptado</option>
@@ -345,13 +394,36 @@ export default function AltaFelino() {
                     {notificacion && (
                         <div
                             aria-live="polite"
-                            className={`flex items-center gap-3 rounded-xl p-4 text-sm font-medium ${notificacion.tipo === 'exito'
+                            className={`flex flex-col gap-2 rounded-xl p-4 text-sm font-medium ${
+                                notificacion.tipo === 'exito'
                                     ? 'bg-green-50 text-green-900 ring-1 ring-green-600/30'
                                     : 'bg-red-50 text-red-900 ring-1 ring-red-600/30'
-                                }`}
+                            }`}
                         >
-                            <span>{notificacion.tipo === 'exito' ? '✅' : '⚠️'}</span>
-                            <p>{notificacion.mensaje}</p>
+                            <div className="flex items-center gap-3">
+                                <span>{notificacion.tipo === 'exito' ? '✅' : '⚠️'}</span>
+                                <p>{notificacion.mensaje}</p>
+                            </div>
+
+                            {/* Enlace directo a registrar procedencia si el alta fue exitosa */}
+                            {notificacion.tipo === 'exito' && notificacion.gatoIdCreado && (
+                                <div className="mt-2 pt-2 border-t border-green-200">
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            navigate('/admin/ingresos', {
+                                                state: {
+                                                    gatoId: notificacion.gatoIdCreado,
+                                                    codigoFelino: notificacion.codigoCreado,
+                                                },
+                                            })
+                                        }
+                                        className="inline-flex items-center gap-1.5 font-bold text-green-800 underline hover:text-green-950 cursor-pointer"
+                                    >
+                                        ➡️ Proceder ahora a registrar procedencia / ingreso de este felino
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -361,15 +433,22 @@ export default function AltaFelino() {
                             ref={botonRef}
                             type="submit"
                             disabled={enviando}
-                            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-marino px-8 font-semibold text-crema transition hover:bg-marino/90 focus:outline-none focus:ring-2 focus:ring-[#A9D6E8] focus:ring-offset-2 disabled:opacity-70 sm:w-auto"
+                            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-marino px-8 font-semibold text-crema transition hover:bg-marino/90 focus:outline-none focus:ring-2 focus:ring-[#A9D6E8] focus:ring-offset-2 disabled:opacity-70 sm:w-auto cursor-pointer"
                         >
                             {enviando ? (
                                 <>
                                     <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
-                                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" />
+                                        <circle
+                                            cx="12"
+                                            cy="12"
+                                            r="10"
+                                            stroke="currentColor"
+                                            strokeWidth="4"
+                                            className="opacity-25"
+                                        />
                                         <path fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" className="opacity-75" />
                                     </svg>
-                                    <span>Guardando...</span>
+                                    <span>Guardando en BD...</span>
                                 </>
                             ) : (
                                 <span>Registrar Felino</span>

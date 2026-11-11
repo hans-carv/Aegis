@@ -1,8 +1,7 @@
 import { useEffect, useState, type SubmitEvent } from 'react'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import GatoCard, { type EstadoGato } from '../../components/GatoCard'
 import {
-    MODO_DEMOSTRACION,
     enviarIngreso,
     obtenerGatosParaIngreso,
     type CreateIngresoPayload,
@@ -46,10 +45,6 @@ const OPCIONES_PROCEDENCIA: { valor: ViaProcedencia; etiqueta: string; descripci
     { valor: 'FUNDACION', etiqueta: 'Fundación', descripcion: 'Derivado por una fundación aliada.' },
     { valor: 'PARTICULAR', etiqueta: 'Particular', descripcion: 'Lo trae una persona que ya no puede cuidarlo.' },
 ]
-
-const MENSAJE_EXITO = MODO_DEMOSTRACION
-    ? 'Simulación completada: el formulario es válido. Estás en modo de demostración, así que no se guardó ningún ingreso.'
-    : 'Ingreso registrado correctamente.'
 
 const CLASE_CONTROL =
     'w-full rounded-xl border border-[#172641]/50 bg-white px-4 font-sans text-base text-[#172641] placeholder:text-[#172641]/65 outline-none transition focus-visible:border-[#172641] focus-visible:ring-2 focus-visible:ring-[#A9D6E8] disabled:cursor-not-allowed disabled:bg-[#FAF7F0] aria-[invalid=true]:border-red-700 aria-[invalid=true]:focus-visible:ring-red-200'
@@ -120,6 +115,7 @@ function construirPayload(v: Valores, via: ViaProcedencia): CreateIngresoPayload
 }
 
 export default function RegistrarIngreso() {
+    const location = useLocation()
     const [valores, setValores] = useState<Valores>(VALORES_INICIALES)
     const [errores, setErrores] = useState<Errores>({})
     const [enviando, setEnviando] = useState(false)
@@ -136,6 +132,12 @@ export default function RegistrarIngreso() {
                 if (!activo) return
                 setGatos(lista)
                 setEstadoGatos('listo')
+
+                // Si venimos de AltaFelino con un gato recién creado, seleccionarlo automáticamente
+                const gatoIdRecibido = location.state?.gatoId
+                if (gatoIdRecibido) {
+                    setValores((prev) => ({ ...prev, gatoId: gatoIdRecibido }))
+                }
             })
             .catch(() => {
                 if (activo) setEstadoGatos('error')
@@ -143,7 +145,7 @@ export default function RegistrarIngreso() {
         return () => {
             activo = false
         }
-    }, [])
+    }, [location.state])
 
     function actualizar(campo: NombreCampo, valor: string) {
         const siguiente = { ...valores, [campo]: valor } as Valores
@@ -183,7 +185,10 @@ export default function RegistrarIngreso() {
         setEnviando(true)
         try {
             await enviarIngreso(construirPayload(valores, via))
-            setNotificacion({ tipo: 'exito', mensaje: MENSAJE_EXITO })
+            setNotificacion({
+                tipo: 'exito',
+                mensaje: `Ingreso registrado exitosamente en la base de datos para el felino ${gatoSeleccionado?.nombre || ''}.`,
+            })
             setValores(VALORES_INICIALES)
             setErrores({})
         } catch (err) {
@@ -196,7 +201,6 @@ export default function RegistrarIngreso() {
         }
     }
 
-    // Obtener el objeto del gato seleccionado para previsualización
     const gatoSeleccionado = gatos.find((g) => g.id === valores.gatoId)
 
     return (
@@ -229,7 +233,7 @@ export default function RegistrarIngreso() {
                             >
                                 <option value="">
                                     {estadoGatos === 'cargando'
-                                        ? 'Cargando gatos…'
+                                        ? 'Cargando gatos desde la base de datos…'
                                         : gatos.length === 0
                                             ? 'Aún no hay gatos dados de alta'
                                             : 'Selecciona un gato'}
@@ -261,10 +265,11 @@ export default function RegistrarIngreso() {
                             {OPCIONES_PROCEDENCIA.map((opcion) => (
                                 <label
                                     key={opcion.valor}
-                                    className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-3.5 transition ${valores.viaProcedencia === opcion.valor
+                                    className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-3.5 transition ${
+                                        valores.viaProcedencia === opcion.valor
                                             ? 'border-marino bg-celeste/30 ring-2 ring-marino'
                                             : 'border-marino/30 bg-white hover:bg-crema'
-                                        }`}
+                                    }`}
                                 >
                                     <input
                                         type="radio"
@@ -340,10 +345,11 @@ export default function RegistrarIngreso() {
 
                     {notificacion && (
                         <div
-                            className={`rounded-xl p-4 text-sm font-medium ${notificacion.tipo === 'exito'
+                            className={`rounded-xl p-4 text-sm font-medium ${
+                                notificacion.tipo === 'exito'
                                     ? 'bg-green-50 text-green-900 ring-1 ring-green-600/30'
                                     : 'bg-red-50 text-red-900 ring-1 ring-red-600/30'
-                                }`}
+                            }`}
                         >
                             {notificacion.mensaje}
                         </div>
@@ -352,13 +358,13 @@ export default function RegistrarIngreso() {
                     <button
                         type="submit"
                         disabled={enviando}
-                        className="w-full rounded-xl bg-marino py-3 text-sm font-semibold text-crema transition hover:bg-marino/90 disabled:opacity-70"
+                        className="w-full rounded-xl bg-marino py-3 text-sm font-semibold text-crema transition hover:bg-marino/90 disabled:opacity-70 cursor-pointer"
                     >
-                        {enviando ? 'Guardando...' : 'Registrar ingreso'}
+                        {enviando ? 'Guardando ingreso en BD...' : 'Registrar ingreso'}
                     </button>
                 </form>
 
-                {/* Tarjeta Visual del Gato Seleccionado */}
+                {/* Tarjeta Visual con datos reales del gato */}
                 <aside className="lg:col-span-5">
                     <div className="sticky top-6">
                         <h2 className="mb-3 font-heading text-sm font-bold uppercase tracking-wider text-cafe">
@@ -368,9 +374,15 @@ export default function RegistrarIngreso() {
                             <GatoCard
                                 codigoFelino={gatoSeleccionado.codigo}
                                 nombre={gatoSeleccionado.nombre}
-                                peso={3.5} // Valores o extensiones de API opcionales
-                                edadMeses={12}
-                                estado={'CUARENTENA' as EstadoGato}
+                                peso={gatoSeleccionado.peso ?? 0}
+                                talla={gatoSeleccionado.talla}
+                                edadMeses={gatoSeleccionado.edadMeses ?? 0}
+                                temperamento={gatoSeleccionado.temperamento}
+                                colorPelaje={gatoSeleccionado.colorPelaje}
+                                sexo={gatoSeleccionado.sexo}
+                                estado={(gatoSeleccionado.estado as EstadoGato) || 'CUARENTENA'}
+                                fotoUrl={gatoSeleccionado.fotoUrl}
+                                historia={gatoSeleccionado.historia}
                                 modoPublico={false}
                             />
                         ) : (

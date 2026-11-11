@@ -5,6 +5,10 @@ import cors from 'cors';
 import authRoutes from './routes/auth.routes';
 import ingresosRoutes from './routes/ingresos.routes';
 import catsRoutes from './routes/cats.routes';
+import horariosRoutes from './routes/horarios.routes';
+import reservasRoutes from './routes/reservas.routes';
+import postulacionesRoutes from './routes/postulaciones.routes';
+import documentosRoutes from './routes/documentos.routes';
 import { publicRoutes } from './routes/public.routes';
 
 dotenv.config();
@@ -18,6 +22,10 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/ingresos', ingresosRoutes);
 app.use('/api/gatos', catsRoutes);
+app.use('/api/admin/horarios', horariosRoutes);
+app.use('/api/reservas', reservasRoutes);
+app.use('/api/postulaciones', postulacionesRoutes);
+app.use('/api/postulaciones', documentosRoutes);
 
 // Endpoint publico
 app.use('/api/public', publicRoutes);

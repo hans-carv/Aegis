@@ -1,6 +1,23 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import GatoCard, { type EstadoGato, type SexoGato } from '../../components/GatoCard'
-import { obtenerCatalogoPublico, type FelinoPublico } from '../../services/catsService'
+import teoFoto from '../../assets/teo.jfif'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+
+interface FelinoPublico {
+    id?: string
+    codigoFelino: string
+    nombre: string
+    peso?: number
+    talla?: string
+    edadMeses: number
+    temperamento?: string
+    colorPelaje?: string
+    sexo?: SexoGato
+    estado: EstadoGato
+    fotoUrl?: string
+    historia?: string
+}
 
 export default function PublicCatalog() {
     const [gatos, setGatos] = useState<FelinoPublico[]>([])
@@ -8,77 +25,101 @@ export default function PublicCatalog() {
     const [error, setError] = useState<string | null>(null)
     const [busqueda, setBusqueda] = useState('')
 
-    const cargarGatos = useCallback(async () => {
-        setCargando(true)
-        setError(null)
-        try {
-            const data = await obtenerCatalogoPublico()
-            setGatos(data)
-        } catch (err: any) {
-            setError(err.message || 'No se pudo cargar el catálogo de gatos.')
-        } finally {
-            setCargando(false)
+    useEffect(() => {
+        let activo = true
+
+        async function cargarCatalogo() {
+            setCargando(true)
+            setError(null)
+
+            try {
+                // Llamada pública sin Authorization header (DoD SCRUM-32 / SCRUM-34)
+                const res = await fetch(`${API_URL}/public/cats`)
+
+                if (!res.ok) {
+                    throw new Error(`Error ${res.status}: no se pudo cargar el catálogo público.`)
+                }
+
+                const json = await res.json()
+                if (activo) {
+                    setGatos(json.data || [])
+                }
+            } catch (err: any) {
+                if (activo) {
+                    setError(err.message || 'Error de conexión con el servidor')
+                }
+            } finally {
+                if (activo) {
+                    setCargando(false)
+                }
+            }
+        }
+
+        cargarCatalogo()
+
+        return () => {
+            activo = false
         }
     }, [])
 
-    useEffect(() => {
-        cargarGatos()
-    }, [cargarGatos])
-
     function handleAdoptar(codigo: string) {
-        alert(`¡Gracias por tu interés en adoptar a (${codigo})! Por favor visítanos en Teo Cat Café o comunícate con la administración.`)
+        alert(
+            `¡Gracias por tu interés en adoptar a (${codigo})! Por favor visítanos en Teo Cat Café o comunícate con la administración.`
+        )
     }
 
-    const gatosFiltrados = gatos.filter((g) =>
-        (g.nombre || '').toLowerCase().includes(busqueda.toLowerCase()) ||
-        (g.temperamento || '').toLowerCase().includes(busqueda.toLowerCase())
-    )
+    // Filtrado seguro contra valores nulos o indefinidos
+    const gatosFiltrados = gatos.filter((g) => {
+        const query = busqueda.toLowerCase().trim()
+        if (!query) return true
+
+        const coincideNombre = g.nombre?.toLowerCase().includes(query) ?? false
+        const coincideTemperamento = g.temperamento?.toLowerCase().includes(query) ?? false
+        const coincidePelaje = g.colorPelaje?.toLowerCase().includes(query) ?? false
+
+        return coincideNombre || coincideTemperamento || coincidePelaje
+    })
 
     return (
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 md:px-8">
-            {/* Encabezado del Catálogo */}
-            <header className="mb-8 text-center sm:text-left">
-                <h1 className="font-heading text-3xl font-extrabold text-marino sm:text-4xl">
-                    Nuestros gatitos en adopción
-                </h1>
-                <p className="mt-2 text-sm text-marino/70 sm:text-base max-w-2xl">
-                    Conoce a los felinos que se encuentran listos para integrarse a una nueva familia. Todos cuentan con revisión médica inicial y protocolo de vacunas.
-                </p>
+            <header className="mb-8 space-y-4">
+                <div className="flex flex-col gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-cafe">Catálogo en Adopción</span>
+                    <h1 className="font-heading text-3xl font-extrabold tracking-tight text-marino sm:text-4xl">
+                        Nuestros Felinos Residentes
+                    </h1>
+                    <p className="max-w-2xl text-sm leading-relaxed text-marino/80 sm:text-base">
+                        Conoce a los gatitos que están buscando un hogar responsable y amoroso. Cada uno tiene una
+                        historia y una personalidad única.
+                    </p>
+                </div>
 
-                {/* Búsqueda rápida */}
-                <div className="mt-6 flex flex-col sm:flex-row gap-4 justify-between items-center">
+                {/* Filtro y Contador */}
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-t border-beige/60 pt-4">
                     <div className="relative w-full sm:w-80">
                         <input
                             type="text"
-                            placeholder="Buscar por nombre o temperamento..."
+                            placeholder="Buscar por nombre, temperamento o pelaje..."
                             value={busqueda}
                             onChange={(e) => setBusqueda(e.target.value)}
-                            className="w-full rounded-xl border border-marino/30 bg-white px-4 py-2.5 text-sm outline-none focus:border-marino focus:ring-2 focus:ring-[#A9D6E8]"
+                            className="w-full rounded-xl border border-marino/30 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-marino focus:ring-2 focus:ring-[#A9D6E8]"
                         />
                     </div>
                     <p className="text-xs font-semibold text-cafe">
-                        Mostrando {gatosFiltrados.length} gatitos disponibles
+                        Mostrando {gatosFiltrados.length} de {gatos.length} felinos disponibles
                     </p>
                 </div>
             </header>
 
-            {/* Mensaje de Error */}
-            {error && (
-                <div className="mb-6 flex items-center justify-between rounded-2xl bg-red-50 p-4 text-sm text-red-800 ring-1 ring-red-200">
-                    <div className="flex items-center gap-2">
-                        <span>⚠️</span>
-                        <span>{error}</span>
-                    </div>
-                    <button
-                        onClick={cargarGatos}
-                        className="rounded-lg bg-red-800 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-900 transition"
-                    >
-                        Reintentar
-                    </button>
+            {/* Manejo de error de conexión */}
+            {!cargando && error && (
+                <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
+                    <p className="font-sans text-sm font-medium text-red-600">{error}</p>
+                    <p className="mt-1 text-xs text-red-400">Verifica que el backend esté corriendo en el puerto 3000.</p>
                 </div>
             )}
 
-            {/* Indicador de Carga (Skeletons) */}
+            {/* Indicador de Carga (Skeletons - SCRUM-34) */}
             {cargando ? (
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                     {[1, 2, 3].map((i) => (
@@ -86,34 +127,39 @@ export default function PublicCatalog() {
                     ))}
                 </div>
             ) : gatosFiltrados.length === 0 ? (
-                /* Mensaje cuando no existan gatos */
+                /* Mensaje para catálogo vacío - SCRUM-34 */
                 <div className="flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-beige bg-white p-12 text-center">
-                    <svg className="h-16 w-16 text-cafe/40 mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <svg
+                        className="h-16 w-16 text-cafe/40 mb-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                    >
                         <circle cx="12" cy="12" r="9" />
                         <path d="M12 8v4M12 16v.01" />
                     </svg>
-                    <h3 className="font-heading text-xl font-bold text-marino">No se encontraron gatitos</h3>
-                    <p className="mt-1 text-sm text-marino/70 max-w-md">
-                        En este momento no hay felinos disponibles con ese criterio de búsqueda o están en periodo de cuarentena.
+                    <h3 className="font-heading text-lg font-bold text-marino">No encontramos felinos</h3>
+                    <p className="mt-1 text-sm text-marino/70">
+                        {busqueda ? 'No hay gatos que coincidan con tu búsqueda.' : 'No hay gatos disponibles para adopción en este momento.'}
                     </p>
                 </div>
             ) : (
-                /* Grilla de Cards */
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                     {gatosFiltrados.map((gato) => (
                         <GatoCard
                             key={gato.codigoFelino}
                             codigoFelino={gato.codigoFelino}
                             nombre={gato.nombre}
-                            peso={gato.peso || 0}
-                            talla={gato.talla || undefined}
+                            peso={Number(gato.peso) || 0}
+                            talla={gato.talla}
                             edadMeses={gato.edadMeses}
-                            temperamento={gato.temperamento || undefined}
-                            colorPelaje={gato.colorPelaje || undefined}
-                            sexo={gato.sexo as SexoGato | undefined}
-                            estado={gato.estado as EstadoGato}
-                            fotoUrl={gato.fotoUrl || (gato as any).foto_url || undefined}
-                            historia={gato.historia || undefined}
+                            temperamento={gato.temperamento || 'Sociable'}
+                            colorPelaje={gato.colorPelaje}
+                            sexo={gato.sexo}
+                            estado={gato.estado}
+                            fotoUrl={gato.fotoUrl || (gato as any).foto_url || teoFoto}
+                            historia={gato.historia}
                             modoPublico={true}
                             onAdoptar={handleAdoptar}
                         />
