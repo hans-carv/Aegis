@@ -1,0 +1,27 @@
+# Dependencias
+node_modules/
+**/node_modules/
+
+# Entorno y credenciales
+.env
+.env.*
+!.env.example
+
+# Compilacion y empaquetado
+dist/
+**/dist/
+build/
+**/build/
+
+# Reportes y logs
+coverage/
+**/coverage/
+*.log
+npm-debug.log*
+
+# Editores y SO
+.vs/
+.vscode/
+!.vscode/settings.json
+.DS_Store
+Thumbs.db

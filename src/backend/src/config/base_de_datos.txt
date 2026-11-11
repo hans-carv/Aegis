@@ -1,26 +1,89 @@
+-- =============================================================================
+-- SISTEMA TEO CAT CAFÉ - SCRIPT COMPLETO DE BASE DE DATOS (POSTGRESQL)
+-- =============================================================================
 
-TRUNCATE TABLE public.ingresos, public.gatos, public.usuarios, public.roles RESTART IDENTITY CASCADE;
+-- 1. Habilitar extensión UUID
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-
-INSERT INTO public.roles (nombre) VALUES 
-    ('ADMIN'),
-    ('USUARIO');
-
-INSERT INTO public.usuarios (nombre_completo, email, password_hash, rol_id, activo)
-VALUES (
-    'Administrador Teo',
-    'admin@teocatcafe.bo',
-    '$2b$10$wK1FmX/J1L2lG6m5e3k4.OTeN5V3m2P1Z0yQ7w8e9r0t1y2u3i4o5', 
-    (SELECT id FROM public.roles WHERE nombre = 'ADMIN'),
-    true
+-- 2. Tabla: roles
+CREATE TABLE IF NOT EXISTS public.roles (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    nombre VARCHAR(50) NOT NULL UNIQUE
 );
 
-INSERT INTO public.gatos (codigo_felino, nombre, peso, talla, edad_meses, temperamento, color_pelaje, sexo, estado, foto_url, historia)
-VALUES 
-    ('CAT-PUB-01', 'Oliver', 4.10, 'Mediano', 12, 'Cariñoso y tranquilo', 'Naranja', 'MACHO', 'DISPONIBLE', NULL, 'Rescatado de cachorro, busca un hogar paciente y amoroso.'),
-    ('CAT-PUB-02', 'Mía', 3.50, 'Pequeño', 8, 'Juguetona y curiosa', 'Calicó', 'HEMBRA', 'DISPONIBLE', NULL, 'Le encantan las pelotas de lana y dormir bajo el sol.'),
-    ('CAT-TEO-101', 'Luna', 3.20, 'Pequeño', 6, 'Tímida', 'Negro', 'HEMBRA', 'CUARENTENA', NULL, 'Ingreso reciente para evaluación médica preventiva.');
+-- Insertar roles base
+INSERT INTO public.roles (nombre)
+VALUES ('ADMIN'), ('USUARIO')
+ON CONFLICT (nombre) DO NOTHING;
 
+-- 3. Tabla: usuarios
+CREATE TABLE IF NOT EXISTS public.usuarios (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    nombre_completo VARCHAR(150) NOT NULL,
+    email VARCHAR(150) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    activo BOOLEAN NOT NULL DEFAULT true,
+    rol_id UUID NOT NULL REFERENCES public.roles(id) ON DELETE RESTRICT,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Usuarios iniciales (Password: TeoCat2026*)
+INSERT INTO public.usuarios (nombre_completo, email, password_hash, activo, rol_id)
+SELECT 'Gisel Administradora', 'admin@teocatcafe.bo', '$2b$10$y6MyJhueKU3upPzuFpKvBefNy8ROMznyOWHShgL0d3ukP9AGeCDDu', true, id
+FROM public.roles WHERE nombre = 'ADMIN'
+ON CONFLICT (email) DO NOTHING;
+
+INSERT INTO public.usuarios (nombre_completo, email, password_hash, activo, rol_id)
+SELECT 'Cliente Teo', 'cliente@teocatcafe.bo', '$2b$10$y6MyJhueKU3upPzuFpKvBefNy8ROMznyOWHShgL0d3ukP9AGeCDDu', true, id
+FROM public.roles WHERE nombre = 'USUARIO'
+ON CONFLICT (email) DO NOTHING;
+
+-- 4. Tabla: gatos
+CREATE TABLE IF NOT EXISTS public.gatos (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    codigo_felino VARCHAR(50) NOT NULL UNIQUE,
+    nombre VARCHAR(100) NOT NULL,
+    peso NUMERIC(5,2) NOT NULL DEFAULT 1.0 CHECK (peso > 0),
+    talla VARCHAR(20),
+    edad_meses INT NOT NULL DEFAULT 12 CHECK (edad_meses > 0),
+    temperamento VARCHAR(150),
+    color_pelaje VARCHAR(50),
+    sexo VARCHAR(10) CHECK (sexo IN ('MACHO', 'HEMBRA')),
+    estado VARCHAR(20) NOT NULL DEFAULT 'CUARENTENA' CHECK (estado IN ('CUARENTENA', 'DISPONIBLE', 'ADOPCION', 'ADOPTADO')),
+    foto_url TEXT,
+    historia TEXT,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_gatos_codigo_felino ON public.gatos (codigo_felino);
+
+-- 5. Tabla: ingresos_felinos
+CREATE TABLE IF NOT EXISTS public.ingresos_felinos (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    gato_id UUID NOT NULL REFERENCES public.gatos(id) ON DELETE CASCADE,
+    via_procedencia VARCHAR(20) NOT NULL CHECK (via_procedencia IN ('RESCATADO', 'FUNDACION', 'PARTICULAR')),
+    nombre_institucion VARCHAR(150),
+    fecha_derivacion DATE,
+    observaciones TEXT,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID NOT NULL REFERENCES public.usuarios(id) ON DELETE RESTRICT,
+    CONSTRAINT check_fundacion_fields CHECK (
+        (via_procedencia = 'FUNDACION' AND nombre_institucion IS NOT NULL AND fecha_derivacion IS NOT NULL)
+        OR (via_procedencia <> 'FUNDACION')
+    )
+);
+
+-- Semillas de felinos (Catálogo inicial con fotos)
+INSERT INTO public.gatos (
+  codigo_felino, nombre, peso, talla, edad_meses, temperamento, color_pelaje, sexo, estado, foto_url, historia
+) VALUES 
+  ('CAT-PUB-01', 'Oliver', 4.10, 'Mediano', 12, 'Cariñoso y tranquilo', 'Naranja', 'MACHO', 'DISPONIBLE', 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=600&q=80', 'Rescatado de cachorro, busca un hogar amoroso y paciente.'),
+  ('CAT-PUB-02', 'Mía', 3.50, 'Pequeño', 8, 'Juguetona y curiosa', 'Calicó', 'HEMBRA', 'DISPONIBLE', 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?auto=format&fit=crop&w=600&q=80', 'Hermana de Oliver, le encantan las pelotas de lana y dormir al sol.'),
+  ('CAT-PUB-03', 'Thor', 5.20, 'Grande', 24, 'Tímido pero leal', 'Negro', 'MACHO', 'CUARENTENA', 'https://images.unsplash.com/photo-1518791841217-8f162f1e1131?auto=format&fit=crop&w=600&q=80', 'En periodo de observación médica preventiva.'),
+  ('CAT-PUB-04', 'Bella', 3.80, 'Mediano', 16, 'Sociable y activa', 'Blanco', 'HEMBRA', 'ADOPTADO', 'https://images.unsplash.com/photo-1495360010541-f48722b34f7d?auto=format&fit=crop&w=600&q=80', 'Adoptada con éxito por una amorosa familia.')
+ON CONFLICT (codigo_felino) DO NOTHING;
+
+-- 6. Tabla: franjas_horarias (SCRUM 38)
 CREATE TABLE IF NOT EXISTS public.franjas_horarias (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     dia_semana VARCHAR(10) NOT NULL CHECK (dia_semana IN ('LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO')),
@@ -34,53 +97,34 @@ CREATE TABLE IF NOT EXISTS public.franjas_horarias (
     CONSTRAINT chk_rango_horario CHECK (hora_inicio < hora_fin)
 );
 
--- Índice para optimizar consultas de solapamiento
-CREATE INDEX idx_franjas_dia_horario ON public.franjas_horarias (dia_semana, hora_inicio, hora_fin) WHERE activo = TRUE;
-
-CREATE TABLE IF NOT EXISTS public.reservas_visita (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    usuario_id UUID NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE,
-    franja_id UUID NOT NULL REFERENCES public.franjas_horarias(id) ON DELETE RESTRICT,
-    fecha_reserva DATE NOT NULL,
-    cantidad_personas INTEGER NOT NULL DEFAULT 1 CHECK (cantidad_personas > 0),
-    estado VARCHAR(20) NOT NULL DEFAULT 'CONFIRMADA' CHECK (estado IN ('CONFIRMADA', 'CANCELADA', 'COMPLETADA')),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
-    -- Constraint única para satisfacer SCRUM-48 y Criterio 4:
-    CONSTRAINT uq_usuario_franja_fecha UNIQUE (usuario_id, franja_id, fecha_reserva)
-);
-
-CREATE INDEX IF NOT EXISTS idx_reservas_franja_fecha 
-ON public.reservas_visita (franja_id, fecha_reserva) 
-WHERE estado = 'CONFIRMADA';
-
-
-CREATE TABLE IF NOT EXISTS public.reservas_visita (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    usuario_id UUID NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE,
-    franja_id UUID NOT NULL REFERENCES public.franjas_horarias(id) ON DELETE RESTRICT,
-    fecha_reserva DATE NOT NULL,
-    cantidad_personas INTEGER NOT NULL DEFAULT 1 CHECK (cantidad_personas > 0),
-    estado VARCHAR(20) NOT NULL DEFAULT 'CONFIRMADA' CHECK (estado IN ('CONFIRMADA', 'CANCELADA', 'COMPLETADA')),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
-    -- Constraint única para satisfacer SCRUM-48 y Criterio 4:
-    CONSTRAINT uq_usuario_franja_fecha UNIQUE (usuario_id, franja_id, fecha_reserva)
-);
-
-CREATE INDEX IF NOT EXISTS idx_reservas_franja_fecha 
-ON public.reservas_visita (franja_id, fecha_reserva) 
-WHERE estado = 'CONFIRMADA';
+CREATE INDEX IF NOT EXISTS idx_franjas_dia_horario ON public.franjas_horarias (dia_semana, hora_inicio, hora_fin) WHERE activo = TRUE;
 
 INSERT INTO public.franjas_horarias (dia_semana, hora_inicio, hora_fin, aforo_maximo, activo)
 VALUES 
   ('LUNES', '09:00:00', '11:00:00', 8, TRUE),
   ('LUNES', '11:30:00', '13:30:00', 8, TRUE),
   ('LUNES', '15:00:00', '17:00:00', 6, TRUE),
-  ('MARTES', '09:00:00', '11:00:00', 8, TRUE);
+  ('MARTES', '09:00:00', '11:00:00', 8, TRUE)
+ON CONFLICT DO NOTHING;
 
+-- 7. Tabla: reservas_visita (SCRUM 43)
+CREATE TABLE IF NOT EXISTS public.reservas_visita (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    usuario_id UUID NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE,
+    franja_id UUID NOT NULL REFERENCES public.franjas_horarias(id) ON DELETE RESTRICT,
+    fecha_reserva DATE NOT NULL,
+    cantidad_personas INTEGER NOT NULL DEFAULT 1 CHECK (cantidad_personas > 0),
+    estado VARCHAR(20) NOT NULL DEFAULT 'CONFIRMADA' CHECK (estado IN ('CONFIRMADA', 'CANCELADA', 'COMPLETADA')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_usuario_franja_fecha UNIQUE (usuario_id, franja_id, fecha_reserva)
+);
+
+CREATE INDEX IF NOT EXISTS idx_reservas_franja_fecha 
+ON public.reservas_visita (franja_id, fecha_reserva) 
+WHERE estado = 'CONFIRMADA';
+
+-- 8. Tabla: postulaciones_adopcion (SCRUM 44 & 61)
 CREATE TABLE IF NOT EXISTS public.postulaciones_adopcion (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     usuario_id UUID NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE,
@@ -90,6 +134,10 @@ CREATE TABLE IF NOT EXISTS public.postulaciones_adopcion (
     presupuesto_mensual NUMERIC(10, 2) NOT NULL CHECK (presupuesto_mensual > 0),
     telefono_contacto VARCHAR(20) NOT NULL,
     direccion_domicilio VARCHAR(255) NOT NULL,
+    documentacion_completa BOOLEAN NOT NULL DEFAULT FALSE,
+    motivo_baja TEXT,
+    cancelado_por UUID REFERENCES public.usuarios(id),
+    fecha_baja TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -98,11 +146,7 @@ CREATE INDEX IF NOT EXISTS idx_postulaciones_gato_id ON public.postulaciones_ado
 CREATE INDEX IF NOT EXISTS idx_postulaciones_usuario_id ON public.postulaciones_adopcion(usuario_id);
 CREATE INDEX IF NOT EXISTS idx_postulaciones_estado ON public.postulaciones_adopcion(estado);
 
--- Agregar flag de verificación documental en postulaciones_adopcion
-ALTER TABLE public.postulaciones_adopcion 
-ADD COLUMN IF NOT EXISTS documentacion_completa BOOLEAN NOT NULL DEFAULT FALSE;
-
--- Tabla para almacenar los metadatos criptográficos de los archivos
+-- 9. Tabla: documentos_postulacion (SCRUM 61)
 CREATE TABLE IF NOT EXISTS public.documentos_postulacion (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     postulacion_id UUID NOT NULL REFERENCES public.postulaciones_adopcion(id) ON DELETE CASCADE,

@@ -374,13 +374,13 @@ export default function RegistrarIngreso() {
                             <GatoCard
                                 codigoFelino={gatoSeleccionado.codigo}
                                 nombre={gatoSeleccionado.nombre}
-                                peso={gatoSeleccionado.peso}
+                                peso={gatoSeleccionado.peso ?? 0}
                                 talla={gatoSeleccionado.talla}
-                                edadMeses={gatoSeleccionado.edadMeses}
+                                edadMeses={gatoSeleccionado.edadMeses ?? 0}
                                 temperamento={gatoSeleccionado.temperamento}
                                 colorPelaje={gatoSeleccionado.colorPelaje}
                                 sexo={gatoSeleccionado.sexo}
-                                estado={gatoSeleccionado.estado}
+                                estado={(gatoSeleccionado.estado as EstadoGato) || 'CUARENTENA'}
                                 fotoUrl={gatoSeleccionado.fotoUrl}
                                 historia={gatoSeleccionado.historia}
                                 modoPublico={false}

@@ -1,7 +1,8 @@
 // src/context/AuthContext.tsx
 import { createContext, useState, useEffect, type ReactNode } from 'react'
 import type { Usuario, AuthContextType } from '../types/auth'
-import { login as loginService, register as registerService } from '../services/authService' // 👈 import actualizado
+import { login as loginService, register as registerService, logoutUsuario } from '../services/authService'
+import { setAuthToken, removeAuthToken } from '../services/api'
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
@@ -14,13 +15,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const sesionGuardada = localStorage.getItem('teo_user_session')
     const tokenGuardado = localStorage.getItem('teo_auth_token')
 
-    if (sesionGuardada && tokenGuardado) {
+    if (sesionGuardada) {
       try {
-        setUsuario(JSON.parse(sesionGuardada))
-        setToken(tokenGuardado)
+        const userParsed = JSON.parse(sesionGuardada)
+        if (tokenGuardado) {
+          userParsed.token = tokenGuardado
+          setAuthToken(tokenGuardado)
+          setToken(tokenGuardado)
+        }
+        setUsuario(userParsed)
       } catch {
         localStorage.removeItem('teo_user_session')
         localStorage.removeItem('teo_auth_token')
+        removeAuthToken()
       }
     }
     setCargando(false)
@@ -53,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null)
     localStorage.removeItem('teo_user_session')
     localStorage.removeItem('teo_auth_token')
+    logoutUsuario()
   }
 
   return (
@@ -63,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         cargando,
         token,
         login,
-        register, // 👈 expuesto al contexto
+        register,
         logout,
       }}
     >

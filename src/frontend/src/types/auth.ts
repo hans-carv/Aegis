@@ -6,6 +6,7 @@ export interface Usuario {
   nombre: string
   email: string
   rol: RolUsuario
+  token?: string
 }
 
 export interface AuthContextType {
@@ -13,7 +14,7 @@ export interface AuthContextType {
   estaAutenticado: boolean
   cargando: boolean
   token: string | null
-  login: (email: string, pass: string) => Promise<Usuario>
-  register: (nombre: string, email: string, pass: string) => Promise<Usuario> 
+  login: (email: string, pass: string) => Promise<Usuario | void>
+  register: (nombre: string, email: string, pass: string) => Promise<Usuario>
   logout: () => void
 }

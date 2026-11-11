@@ -1,18 +1,18 @@
-// src/routes/postulaciones.routes.ts
 import { Router } from 'express';
 import {
-  crearPostulacionController,
-  bloquearModificacionController,
-  listarPostulacionesAdminController,
-  cancelarPostulacionController, // <-- Verificar importación
-} from '../controllers/postulaciones.controller';
-import { authenticateJWT, authorizeRole } from '../middlewares/auth.middleware';
+  consultarDisponibilidadController,
+  crearReservaController,
+  listarMisReservasController,
+} from '../controllers/reservas.controller';
+import { authenticateJWT } from '../middlewares/auth.middleware';
 
 const router = Router();
 
-router.post('/', authenticateJWT, crearPostulacionController);
-router.put('/:id', authenticateJWT, bloquearModificacionController);
-router.get('/admin', authenticateJWT, authorizeRole('ADMIN'), listarPostulacionesAdminController);
-router.patch('/:id/cancelar', authenticateJWT, cancelarPostulacionController);
+// Consulta pública o autenticada de turnos
+router.get('/disponibilidad', consultarDisponibilidadController);
+
+// Rutas protegidas para usuarios registrados
+router.post('/', authenticateJWT, crearReservaController);
+router.get('/mis-reservas', authenticateJWT, listarMisReservasController);
 
 export default router;

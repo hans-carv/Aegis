@@ -1,8 +1,8 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router'
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './routes/ProtectedRoute'
-import AdminLayout from './layouts/AdminLayout'
 import PublicLayout from './layouts/PublicLayout'
+import AdminLayout from './layouts/AdminLayout'
 import AdminHome from './pages/admin/AdminHome'
 import RegistrarIngreso from './pages/admin/RegistrarIngreso'
 import RegistrarGato from './pages/admin/RegistrarGato'
@@ -24,7 +24,7 @@ export default function App() {
 
           {/* Autenticación */}
           <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} /> {}
+          <Route path="/register" element={<Register />} />
 
           {/* Rutas de Administración */}
           <Route element={<ProtectedRoute />}>

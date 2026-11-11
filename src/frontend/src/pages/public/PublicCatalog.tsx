@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import GatoCard, { type EstadoGato } from '../../components/GatoCard'
+import GatoCard, { type EstadoGato, type SexoGato } from '../../components/GatoCard'
 import teoFoto from '../../assets/teo.jfif'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
@@ -13,7 +13,7 @@ interface FelinoPublico {
     edadMeses: number
     temperamento?: string
     colorPelaje?: string
-    sexo?: 'MACHO' | 'HEMBRA'
+    sexo?: SexoGato
     estado: EstadoGato
     fotoUrl?: string
     historia?: string
@@ -82,17 +82,20 @@ export default function PublicCatalog() {
 
     return (
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 md:px-8">
-            {/* Encabezado del Catálogo */}
-            <header className="mb-8 text-center sm:text-left">
-                <h1 className="font-heading text-3xl font-extrabold text-marino sm:text-4xl">
-                    Nuestros gatitos en adopción
-                </h1>
-                <p className="mt-2 text-sm text-marino/70 sm:text-base max-w-2xl">
-                    Conoce a los felinos que se encuentran listos para integrarse a una nueva familia. Todos cuentan con revisión médica inicial y protocolo de vacunas.
-                </p>
+            <header className="mb-8 space-y-4">
+                <div className="flex flex-col gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-cafe">Catálogo en Adopción</span>
+                    <h1 className="font-heading text-3xl font-extrabold tracking-tight text-marino sm:text-4xl">
+                        Nuestros Felinos Residentes
+                    </h1>
+                    <p className="max-w-2xl text-sm leading-relaxed text-marino/80 sm:text-base">
+                        Conoce a los gatitos que están buscando un hogar responsable y amoroso. Cada uno tiene una
+                        historia y una personalidad única.
+                    </p>
+                </div>
 
-                {/* Búsqueda rápida */}
-                <div className="mt-6 flex flex-col sm:flex-row gap-4 justify-between items-center">
+                {/* Filtro y Contador */}
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-t border-beige/60 pt-4">
                     <div className="relative w-full sm:w-80">
                         <input
                             type="text"
@@ -103,7 +106,7 @@ export default function PublicCatalog() {
                         />
                     </div>
                     <p className="text-xs font-semibold text-cafe">
-                        Mostrando {gatosFiltrados.length} gatitos disponibles
+                        Mostrando {gatosFiltrados.length} de {gatos.length} felinos disponibles
                     </p>
                 </div>
             </header>
@@ -136,9 +139,9 @@ export default function PublicCatalog() {
                         <circle cx="12" cy="12" r="9" />
                         <path d="M12 8v4M12 16v.01" />
                     </svg>
-                    <h3 className="font-heading text-xl font-bold text-marino">No se encontraron gatitos</h3>
-                    <p className="mt-1 text-sm text-marino/70 max-w-md">
-                        En este momento no hay felinos disponibles con ese criterio de búsqueda o están en periodo de cuarentena.
+                    <h3 className="font-heading text-lg font-bold text-marino">No encontramos felinos</h3>
+                    <p className="mt-1 text-sm text-marino/70">
+                        {busqueda ? 'No hay gatos que coincidan con tu búsqueda.' : 'No hay gatos disponibles para adopción en este momento.'}
                     </p>
                 </div>
             ) : (
@@ -155,7 +158,7 @@ export default function PublicCatalog() {
                             colorPelaje={gato.colorPelaje}
                             sexo={gato.sexo}
                             estado={gato.estado}
-                            fotoUrl={teoFoto}
+                            fotoUrl={gato.fotoUrl || (gato as any).foto_url || teoFoto}
                             historia={gato.historia}
                             modoPublico={true}
                             onAdoptar={handleAdoptar}
