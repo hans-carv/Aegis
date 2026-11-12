@@ -8,6 +8,7 @@ import RegistrarIngreso from './pages/admin/RegistrarIngreso'
 import RegistrarGato from './pages/admin/RegistrarGato'
 import HorariosAforo from './pages/admin/HorariosAforo'
 import PublicCatalog from './pages/public/PublicCatalog'
+import ReservarVisita from './pages/public/ReservarVisita'
 import Home from './pages/public/Home'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
@@ -21,6 +22,7 @@ export default function App() {
           <Route element={<PublicLayout />}>
             <Route path="/" element={<Home />} />
             <Route path="/catalogo" element={<PublicCatalog />} />
+            <Route path="/visita" element={<ReservarVisita />} />
           </Route>
 
           {/* Autenticación */}
