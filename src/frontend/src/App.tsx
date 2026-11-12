@@ -6,6 +6,7 @@ import AdminLayout from './layouts/AdminLayout'
 import AdminHome from './pages/admin/AdminHome'
 import RegistrarIngreso from './pages/admin/RegistrarIngreso'
 import RegistrarGato from './pages/admin/RegistrarGato'
+import HorariosAforo from './pages/admin/HorariosAforo'
 import PublicCatalog from './pages/public/PublicCatalog'
 import Home from './pages/public/Home'
 import Login from './pages/auth/Login'
@@ -32,6 +33,7 @@ export default function App() {
               <Route index element={<AdminHome />} />
               <Route path="ingresos" element={<RegistrarIngreso />} />
               <Route path="felinos" element={<RegistrarGato />} />
+              <Route path="horarios" element={<HorariosAforo />} />
             </Route>
           </Route>
 

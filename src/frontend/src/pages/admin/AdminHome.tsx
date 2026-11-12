@@ -151,7 +151,7 @@ export default function AdminHome() {
 
                 {/* Lista vacía */}
                 {!cargando && !error && felinos.length === 0 && (
-                    <div className="mt-4 rounded-2xl border border-dashed border-[#D9C3A5] bg-white/50 p-10 text-center">
+                    <div className="mt-4 rounded-2xl border border-dashed border-beige bg-white/50 p-10 text-center">
                         <p className="font-heading text-base font-semibold text-marino">No hay felinos registrados aún</p>
                         <p className="mt-1 text-sm text-marino/60">Haz clic en &ldquo;Dar de alta felinos&rdquo; para registrar el primero.</p>
                     </div>
