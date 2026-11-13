@@ -25,10 +25,15 @@ export default function App() {
                     <Route element={<PublicLayout />}>
                         <Route path="/" element={<Home />} />
                         <Route path="/catalogo" element={<PublicCatalog />} />
+                        <Route path="/cats" element={<Navigate to="/catalogo" replace />} />
+                        <Route path="/gatos" element={<Navigate to="/catalogo" replace />} />
                         <Route path="/visita" element={<ReservarVisita />} />
+                        <Route path="/reservas" element={<Navigate to="/visita" replace />} />
+                        <Route path="/reserva" element={<Navigate to="/visita" replace />} />
                         <Route element={<ProtectedRoute />}>
                             <Route path="/perfil" element={<MiPerfil />} />
                             <Route path="/adoptar/:gatoId" element={<PortularAdopcion />} />
+                            <Route path="/postular/:gatoId" element={<Navigate to="/adoptar/:gatoId" replace />} />
                         </Route>
                     </Route>
 
