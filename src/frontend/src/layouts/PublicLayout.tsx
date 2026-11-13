@@ -1,7 +1,16 @@
-import { Link, NavLink, Outlet } from 'react-router'
+import { Link, NavLink, Outlet} from 'react-router'
+import { LogIn, User } from 'lucide-react'
 import teoLogo from '../assets/teo.jfif'
+import { useAuth } from '../hooks/useAuth'
 
 export default function PublicLayout() {
+    const { usuario, estaAutenticado} = useAuth()
+    
+    const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+        `text-sm font-semibold transition px-3 py-2 rounded-xl ${isActive
+            ? 'text-marino bg-celeste/35'
+            : 'text-marino/75 hover:text-marino hover:bg-crema'
+        }`
     return (
         <div className="flex min-h-svh flex-col bg-crema font-sans text-marino">
             {/* Navbar Superior */}
@@ -25,37 +34,50 @@ export default function PublicLayout() {
                         <NavLink
                             to="/"
                             end
-                            className={({ isActive }) =>
-                                `text-sm font-semibold transition px-3 py-2 rounded-xl ${isActive
-                                    ? 'text-marino bg-celeste/30'
-                                    : 'text-marino/70 hover:text-marino hover:bg-crema'
-                                }`
-                            }
+                            className={navLinkClass}
                         >
                             Inicio
                         </NavLink>
 
                         <NavLink
                             to="/catalogo"
-                            className={({ isActive }) =>
-                                `text-sm font-semibold transition px-3 py-2 rounded-xl ${isActive
-                                    ? 'text-marino bg-celeste/30'
-                                    : 'text-marino/70 hover:text-marino hover:bg-crema'
-                                }`
-                            }
+                            className={navLinkClass}
                         >
                             Adopta
                         </NavLink>
 
-                        <Link
-                            to="/login"
-                            className="inline-flex items-center gap-2 rounded-xl bg-marino px-4 py-2 text-xs sm:text-sm font-semibold text-crema transition hover:bg-marino/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A9D6E8]"
+                        <NavLink
+                            to="/visita"
+                            className={navLinkClass}
                         >
-                            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" />
-                            </svg>
-                            <span>Iniciar sesión</span>
-                        </Link>
+                            Visita
+                        </NavLink>
+
+                        {estaAutenticado ? (
+                            <NavLink to="/perfil" aria-label="Ir a mi perfil"
+                                className={({ isActive }) =>
+                                    `inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs sm:text-sm font-semibold transition ${isActive
+                                        ? 'border-marino bg-celeste/35 text-marino'
+                                        : 'border-beige bg-crema/70 text-marino hover:bg-celeste/25'
+                                    }`
+                                }
+                            >
+                                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-marino text-crema">
+                                    <User className="h-4 w-4" />
+                                </div>
+                                <span className="hidden sm:inline max-w-32 truncate">
+                                    {usuario?.nombre || 'Mi perfil'}
+                                </span>
+                            </NavLink>
+                        ) : (
+                            <Link
+                                to="/login"
+                                className="inline-flex items-center gap-2 rounded-xl bg-marino px-4 py-2 text-xs sm:text-sm font-semibold text-crema transition hover:bg-marino/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A9D6E8]"
+                            >
+                                <LogIn className="h-4 w-4" />
+                                <span>Iniciar sesión</span>
+                            </Link>
+                        )}
                     </nav>
                 </div>
             </header>

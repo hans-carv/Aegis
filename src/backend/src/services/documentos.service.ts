@@ -122,4 +122,36 @@ export class DocumentosService {
       nombreArchivo: doc.nombre_archivo_original,
     };
   }
+
+  static async descargarODesencriptarPorPostulacionYCampo(postulacionId: string, campo: string) {
+    const mapCampo: Record<string, string> = {
+      carnetIdentidad: 'CARNET_IDENTIDAD',
+      facturaServicio: 'FACTURA_SERVICIO',
+      croquisDomicilio: 'CROQUIS_DOMICILIO',
+      CARNET_IDENTIDAD: 'CARNET_IDENTIDAD',
+      FACTURA_SERVICIO: 'FACTURA_SERVICIO',
+      CROQUIS_DOMICILIO: 'CROQUIS_DOMICILIO',
+    };
+    const tipoDoc = mapCampo[campo] || campo;
+
+    const res = await query(
+      `SELECT id, nombre_archivo_original, mime_type, ruta_cifrada, iv_vector, hash_sha256 
+       FROM public.documentos_postulacion 
+       WHERE postulacion_id = $1 AND tipo_documento = $2`,
+      [postulacionId, tipoDoc]
+    );
+
+    if (res.rows.length === 0) {
+      throw { status: 404, message: 'Documento no encontrado para esta postulación.' };
+    }
+
+    const doc = res.rows[0];
+    const decryptedBuffer = FileEncryptionService.decryptFile(doc.ruta_cifrada, doc.iv_vector);
+
+    return {
+      buffer: decryptedBuffer,
+      mimeType: doc.mime_type,
+      nombreArchivo: doc.nombre_archivo_original,
+    };
+  }
 }

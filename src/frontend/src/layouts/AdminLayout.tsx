@@ -1,51 +1,17 @@
 import { NavLink, Outlet, useNavigate } from 'react-router'
+import { CalendarClock, Home, LogOut, PlusSquare, Cat, ClipboardList } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import teoLogo from '../assets/teo.jfif'
 
 const navItems = [
-    { to: '/admin', label: 'Inicio', shortLabel: 'Inicio', end: true },
-    { to: '/admin/ingresos', label: 'Ingresos de gatos', shortLabel: 'Ingresos', end: false },
-    { to: '/admin/felinos', label: 'Felinos', shortLabel: 'Felinos', end: false },
+    { to: '/admin', label: 'Inicio', shortLabel: 'Inicio', end: true, icon: Home },
+    { to: '/admin/ingresos', label: 'Ingresos de gatos', shortLabel: 'Ingresos', end: false, icon: PlusSquare },
+    { to: '/admin/felinos', label: 'Felinos', shortLabel: 'Felinos', end: false, icon: Cat },
+    { to: '/admin/horarios', label: 'Horarios de visita y aforo', shortLabel: 'Horarios', end: false, icon: CalendarClock },
+    { to: '/admin/postulaciones', label: 'Postulaciones de adopción', shortLabel: 'Postulaciones', end: false, icon: ClipboardList },
 ] as const
 
-function HomeIcon() {
-    return (
-        <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-            <path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5Z" />
-        </svg>
-    )
-}
-
-function IngresosIcon() {
-    return (
-        <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-            <path d="M12 5v14M5 12h14" />
-            <rect x="3" y="3" width="18" height="18" rx="4" />
-        </svg>
-    )
-}
-
-function FelinosIcon() {
-    return (
-        <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-            <path d="M5 11c0 4 3 8 7 8s7-4 7-8c0-2-1-5-3-6l-1.5 3L12 6l-2.5 2L8 5c-2 1-3 4-3 6Z" />
-            <circle cx="10" cy="11" r="0.8" fill="currentColor" />
-            <circle cx="14" cy="11" r="0.8" fill="currentColor" />
-        </svg>
-    )
-}
-
-function LogoutIcon() {
-    return (
-        <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-            <path d="M10 17l5-5-5-5M15 12H3M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6" />
-        </svg>
-    )
-}
-
-const icons = [HomeIcon, IngresosIcon, FelinosIcon]
-
-function linkClass(isActive: boolean, compact: boolean) {
+function linkClass(isActive: boolean, compact: boolean) { 
     const base = compact
         ? 'flex flex-1 flex-col items-center gap-1 rounded-xl px-2 py-2 text-[11px] font-semibold transition'
         : 'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition'
@@ -84,8 +50,8 @@ export default function AdminLayout() {
                     </div>
 
                     <nav className="flex flex-col gap-1.5 px-3 py-4" aria-label="Administración">
-                        {navItems.map((item, index) => {
-                            const Icon = icons[index]
+                        {navItems.map((item) => {
+                            const Icon = item.icon
                             return (
                                 <NavLink
                                     key={item.to}
@@ -108,7 +74,7 @@ export default function AdminLayout() {
                         onClick={handleLogout}
                         className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-beige transition hover:bg-red-500/20 hover:text-red-200 cursor-pointer"
                     >
-                        <LogoutIcon />
+                        <LogOut className="h-5 w-5 shrink-0" />
                         <span>Cerrar sesión</span>
                     </button>
                 </div>

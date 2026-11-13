@@ -58,7 +58,7 @@ export const cancelarPostulacionController = async (req: Request, res: Response)
     }
 
     const postulacionId = Array.isArray(req.params.id) ? req.params.id[0] : (req.params.id as string);
-    const { motivo } = req.body;
+    const motivo = req.body.motivo || req.body.motivo_baja;
 
     const data = await PostulacionesService.cancelarPostulacion(
       postulacionId,
