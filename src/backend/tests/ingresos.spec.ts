@@ -1,13 +1,30 @@
 // tests/ingresos.spec.ts
 import request from 'supertest';
 import app from '../src/app';
-import { closePool } from '../src/config/db';
+import { closePool, query } from '../src/config/db';
 
 describe('SCRUM-19 / Registro de ingreso de gatos y vía de llegada', () => {
   let adminToken = '';
   let userToken = '';
 
+  const cleanupTestCats = async () => {
+    try {
+      const res = await query(
+        "SELECT id FROM public.gatos WHERE LOWER(nombre) IN ('simba', 'luna', 'michi solitario', 'michi intruso')"
+      );
+      for (const r of res.rows) {
+        await query('DELETE FROM public.ingresos_felinos WHERE gato_id = $1', [r.id]);
+        await query('DELETE FROM public.postulaciones_adopcion WHERE gato_id = $1', [r.id]);
+        await query('DELETE FROM public.gatos WHERE id = $1', [r.id]);
+      }
+    } catch (err) {
+      // ignore cleanup errors
+    }
+  };
+
   beforeAll(async () => {
+    await cleanupTestCats();
+
     const adminRes = await request(app)
       .post('/api/auth/login')
       .send({ email: 'admin@teocatcafe.bo', password: 'TeoCat2026*' });
@@ -20,6 +37,7 @@ describe('SCRUM-19 / Registro de ingreso de gatos y vía de llegada', () => {
   }, 15000);
 
   afterAll(async () => {
+    await cleanupTestCats();
     await closePool();
   });
 
