@@ -42,10 +42,13 @@ export class PostulacionesService {
     try {
       await client.query('BEGIN');
 
-      // Consultar usando la columna 'estado' existente en public.gatos
+      // Consultar usando la columna 'estado' existente en public.gatos (acepta tanto UUID como codigo_felino)
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(gatoId).trim());
       const gatoRes = await client.query(
-        'SELECT id, nombre, estado FROM public.gatos WHERE id = $1 FOR UPDATE',
-        [gatoId]
+        isUuid
+          ? 'SELECT id, nombre, estado FROM public.gatos WHERE id = $1 FOR UPDATE'
+          : 'SELECT id, nombre, estado FROM public.gatos WHERE UPPER(codigo_felino) = UPPER($1) FOR UPDATE',
+        [String(gatoId).trim()]
       );
 
       if (gatoRes.rows.length === 0) {
@@ -81,7 +84,7 @@ export class PostulacionesService {
 
       const insertRes = await client.query(insertSql, [
         usuarioId,
-        gatoId,
+        gato.id,
         JSON.stringify(cuestionario),
         presupuestoMensual,
         telefonoContacto,
@@ -192,6 +195,52 @@ export class PostulacionesService {
               { campo: 'facturaServicio', etiqueta: 'Comprobante de servicios básicos', cargado: false, tipoMime: 'application/pdf', nombreArchivo: '' },
               { campo: 'croquisDomicilio', etiqueta: 'Croquis del domicilio', cargado: false, tipoMime: 'image/png', nombreArchivo: '' },
             ],
+      };
+    });
+  }
+
+  static async listarMisPostulaciones(usuarioId: string) {
+    const sql = `
+      SELECT 
+        p.id,
+        p.estado,
+        p.presupuesto_mensual AS "presupuestoMensual",
+        p.telefono_contacto AS "telefonoContacto",
+        p.direccion_domicilio AS "direccionDomicilio",
+        p.cuestionario_vivienda AS "cuestionario",
+        p.created_at AS "createdAt",
+        p.documentacion_completa AS "documentacionCompleta",
+        p.motivo_baja AS "motivoBaja",
+        p.cancelado_por AS "canceladoPor",
+        p.fecha_baja AS "fechaBaja",
+        u.nombre_completo AS "postulanteNombre",
+        u.email AS "postulanteEmail",
+        g.nombre AS "gatoNombre",
+        g.codigo_felino AS "codigoFelino",
+        g.id AS "gatoId"
+      FROM public.postulaciones_adopcion p
+      JOIN public.usuarios u ON p.usuario_id = u.id
+      JOIN public.gatos g ON p.gato_id = g.id
+      WHERE p.usuario_id = $1
+      ORDER BY p.created_at DESC;
+    `;
+    const res = await query(sql, [usuarioId]);
+    return res.rows.map((row: any) => {
+      const c = typeof row.cuestionario === 'string' ? JSON.parse(row.cuestionario) : (row.cuestionario || {});
+      return {
+        ...row,
+        felinoNombre: row.gatoNombre,
+        cuestionario: c,
+        tieneMallasProteccion: c.tieneMallasProteccion ?? false,
+        permisoPropietario: c.permisoPropietario ?? false,
+        compromisoTenenciaResponsable: c.compromisoTenenciaResponsable ?? false,
+        otrosAnimalesEnCasa: c.otrosAnimalesEnCasa || '',
+        tiempoSoloAlDiaHoras: c.tiempoSoloAlDiaHoras,
+        fechaPostulacion: row.createdAt ? new Date(row.createdAt).toISOString().split('T')[0] : '',
+        documentacion_completa: Boolean(row.documentacionCompleta),
+        motivo_baja: row.motivoBaja || undefined,
+        cancelada_por: row.canceladoPor || undefined,
+        fecha_baja: row.fechaBaja || undefined,
       };
     });
   }

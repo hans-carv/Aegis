@@ -48,10 +48,6 @@ export default function HorariosAforo() {
     const [activo, setActivo] = useState(true)
     const [motivoBloqueo, setMotivoBloqueo] = useState('')
 
-    useEffect(() => {
-        cargarDatos()
-    }, [])
-
     async function cargarDatos() {
         setCargando(true)
         try {
@@ -63,6 +59,10 @@ export default function HorariosAforo() {
             setCargando(false)
         }
     }
+
+    useEffect(() => {
+        cargarDatos()
+    }, [])
 
     function abrirModalCrear(diaPorDefecto: DiaSemana = 'LUNES') {
         setEditandoId(null)

@@ -46,6 +46,22 @@ export const listarPostulacionesAdminController = async (req: Request, res: Resp
   }
 };
 
+export const listarMisPostulacionesController = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const usuarioId = req.user?.id;
+    if (!usuarioId) {
+      res.status(401).json({ message: 'Usuario no autenticado.' });
+      return;
+    }
+
+    const data = await PostulacionesService.listarMisPostulaciones(usuarioId);
+    res.status(200).json({ ok: true, data });
+  } catch (error: any) {
+    console.error('ERROR EN LISTAR MIS POSTULACIONES:', error);
+    res.status(500).json({ message: 'Error interno al listar tus postulaciones.' });
+  }
+};
+
 
 export const cancelarPostulacionController = async (req: Request, res: Response): Promise<void> => {
   try {

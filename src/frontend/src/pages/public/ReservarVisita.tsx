@@ -59,11 +59,6 @@ export default function ReservarVisita() {
         cuposRestantes: number
     } | null>(null)
 
-    useEffect(() => {
-        if (!fechaSeleccionada) return
-        cargarTurnosFecha(fechaSeleccionada)
-    }, [fechaSeleccionada])
-
     async function cargarTurnosFecha(fecha: string) {
         setCargandoTurnos(true)
         setTurnoSeleccionado(null)
@@ -80,6 +75,11 @@ export default function ReservarVisita() {
             setCargandoTurnos(false)
         }
     }
+
+    useEffect(() => {
+        if (!fechaSeleccionada) return
+        cargarTurnosFecha(fechaSeleccionada)
+    }, [fechaSeleccionada])
 
     function seleccionarTurno(turno: DisponibilidadFranja) {
         if (!turno.disponible) return
