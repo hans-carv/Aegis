@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import {
-    Calendar, CalendarPlus, Clock, Heart,
-    LogOut, Mail, ShieldCheck, Users,
+    Calendar, CalendarPlus, CheckCircle2, Clock, FileCheck2,
+    Heart, LogOut, Mail, MapPin, Phone, ShieldCheck, Users
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { listarMisReservas } from '../../services/reservasService'
+import { listarMisPostulaciones } from '../../services/postulacionesService'
 import type { EstadoReserva, ReservaUsuario } from '../../types/reserva'
+import type { EstadoPostulacion, PostulacionRegistrada } from '../../types/postulacion'
 
 type TabActiva = 'reservas' | 'postulaciones'
 
-const ESTILO_ESTADO: Record<EstadoReserva, { etiqueta: string; clases: string }> = {
+const ESTILO_ESTADO_RESERVA: Record<EstadoReserva, { etiqueta: string; clases: string }> = {
     CONFIRMADA: {
         etiqueta: 'Confirmada',
         clases: 'bg-green-100 text-green-800 ring-green-300',
@@ -26,6 +28,21 @@ const ESTILO_ESTADO: Record<EstadoReserva, { etiqueta: string; clases: string }>
     NO_ASISTIO: {
         etiqueta: 'No asistió',
         clases: 'bg-amber-100 text-cafe ring-beige',
+    },
+}
+
+const ESTILO_ESTADO_POSTULACION: Record<EstadoPostulacion, { etiqueta: string; clases: string }> = {
+    PENDIENTE_REVISION: {
+        etiqueta: 'Pendiente de revisión',
+        clases: 'bg-amber-100 text-cafe ring-beige',
+    },
+    APROBADA: {
+        etiqueta: 'Aprobada',
+        clases: 'bg-green-100 text-green-800 ring-green-300',
+    },
+    RECHAZADA: {
+        etiqueta: 'Rechazada',
+        clases: 'bg-red-100 text-red-800 ring-red-200',
     },
 }
 
@@ -47,13 +64,20 @@ export default function MiPerfil() {
     const [reservas, setReservas] = useState<ReservaUsuario[]>([])
     const [cargandoReservas, setCargandoReservas] = useState(true)
 
+    const [postulaciones, setPostulaciones] = useState<PostulacionRegistrada[]>([])
+    const [cargandoPostulaciones, setCargandoPostulaciones] = useState(true)
+
     useEffect(() => {
         listarMisReservas()
             .then(setReservas)
             .finally(() => setCargandoReservas(false))
+
+        listarMisPostulaciones()
+            .then(setPostulaciones)
+            .finally(() => setCargandoPostulaciones(false))
     }, [])
 
-    function handleLogout() {
+    function manejarCerrarSesion() {
         logout()
         navigate('/')
     }
@@ -93,7 +117,7 @@ export default function MiPerfil() {
                 <div className="flex justify-center sm:justify-end">
                     <button
                         type="button"
-                        onClick={handleLogout}
+                        onClick={manejarCerrarSesion}
                         className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50/70 px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-100 cursor-pointer"
                     >
                         <LogOut className="h-4 w-4" />
@@ -138,6 +162,9 @@ export default function MiPerfil() {
                     >
                         <Heart className="h-4 w-4" />
                         <span>Mis postulaciones</span>
+                        <span className="rounded-full bg-crema px-2 py-0.5 text-xs font-bold text-cafe ring-1 ring-beige">
+                            {postulaciones.length}
+                        </span>
                     </button>
                 </div>
 
@@ -191,7 +218,8 @@ export default function MiPerfil() {
                         ) : (
                             <div className="grid gap-4 sm:grid-cols-2">
                                 {reservas.map((reserva) => {
-                                    const badge = ESTILO_ESTADO[reserva.estado] || ESTILO_ESTADO.CONFIRMADA
+                                    const badge =
+                                        ESTILO_ESTADO_RESERVA[reserva.estado] || ESTILO_ESTADO_RESERVA.CONFIRMADA
 
                                     return (
                                         <article
@@ -235,25 +263,119 @@ export default function MiPerfil() {
                     </div>
                 )}
 
-                {/* Contenido Tab 2: Mis Postulaciones (Preparado para el futuro) */}
+                {/* Contenido Tab 2: Mis Postulaciones */}
                 {tabActiva === 'postulaciones' && (
-                    <div
-                        role="tabpanel"
-                        className="flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-beige bg-white p-12 text-center"
-                    >
-                        <Heart className="h-12 w-12 text-beige" />
-                        <h2 className="mt-4 font-heading text-lg font-bold text-marino">
-                            Aún no tienes solicitudes de adopción
-                        </h2>
-                        <p className="mt-1 max-w-md text-sm text-marino/70">
-                            Cuando te postules para adoptar a uno de nuestros gatitos, podrás hacer seguimiento de tu proceso aquí.
-                        </p>
-                        <Link
-                            to="/catalogo"
-                            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-marino px-5 py-2.5 text-sm font-semibold text-crema hover:bg-marino/90"
-                        >
-                            Conocer gatitos en adopción
-                        </Link>
+                    <div role="tabpanel" className="space-y-5">
+                        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                            <div>
+                                <h2 className="font-heading text-xl font-bold text-marino">
+                                    Solicitudes de adopción
+                                </h2>
+                                <p className="text-sm text-marino/70">
+                                    Seguimiento de tus postulaciones enviadas y estado de verificación.
+                                </p>
+                            </div>
+
+                            <Link
+                                to="/catalogo"
+                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-marino px-4 py-2.5 text-sm font-semibold text-crema transition hover:bg-marino/90"
+                            >
+                                <Heart className="h-4 w-4" />
+                                <span>Explorar catálogo</span>
+                            </Link>
+                        </div>
+
+                        {cargandoPostulaciones ? (
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                {[1, 2].map((n) => (
+                                    <div
+                                        key={n}
+                                        className="h-36 animate-pulse rounded-2xl bg-white/80 ring-1 ring-beige/60"
+                                    />
+                                ))}
+                            </div>
+                        ) : postulaciones.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-beige bg-white p-12 text-center">
+                                <Heart className="h-12 w-12 text-beige" />
+                                <h3 className="mt-4 font-heading text-lg font-bold text-marino">
+                                    Aún no tienes solicitudes de adopción
+                                </h3>
+                                <p className="mt-1 max-w-md text-sm text-marino/70">
+                                    Cuando te postules para adoptar a uno de nuestros gatitos, podrás hacer seguimiento de tu proceso aquí.
+                                </p>
+                                <Link
+                                    to="/catalogo"
+                                    className="mt-6 inline-flex items-center gap-2 rounded-xl bg-marino px-5 py-2.5 text-sm font-semibold text-crema hover:bg-marino/90"
+                                >
+                                    Conocer gatitos en adopción
+                                </Link>
+                            </div>
+                        ) : (
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                {postulaciones.map((postulacion) => {
+                                    const badge =
+                                        ESTILO_ESTADO_POSTULACION[postulacion.estado] ||
+                                        ESTILO_ESTADO_POSTULACION.PENDIENTE_REVISION
+
+                                    return (
+                                        <article
+                                            key={postulacion.id}
+                                            className="flex flex-col justify-between rounded-2xl bg-white p-5 shadow-[0_10px_30px_rgba(23,38,65,0.05)] ring-1 ring-beige/70"
+                                        >
+                                            <div>
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <div>
+                                                        <span className="text-[11px] font-bold uppercase tracking-wider text-cafe">
+                                                            Felino seleccionado
+                                                        </span>
+                                                        <h3 className="font-heading text-lg font-bold text-marino">
+                                                            {postulacion.gatoId}
+                                                        </h3>
+                                                    </div>
+
+                                                    <span
+                                                        className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ${badge.clases}`}
+                                                    >
+                                                        {badge.etiqueta}
+                                                    </span>
+                                                </div>
+
+                                                <div className="mt-4 space-y-2 text-xs text-marino/80">
+                                                    <p className="flex items-center gap-2">
+                                                        <Calendar className="h-4 w-4 shrink-0 text-marino/60" />
+                                                        <span>
+                                                            Enviada el <strong className="capitalize">{formatearFecha(postulacion.fechaPostulacion)}</strong>
+                                                        </span>
+                                                    </p>
+                                                    <p className="flex items-center gap-2">
+                                                        <Phone className="h-4 w-4 shrink-0 text-marino/60" />
+                                                        <span>{postulacion.telefonoContacto}</span>
+                                                    </p>
+                                                    <p className="flex items-center gap-2">
+                                                        <MapPin className="h-4 w-4 shrink-0 text-marino/60" />
+                                                        <span className="truncate">{postulacion.direccionDomicilio}</span>
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-4 flex items-center justify-between border-t border-beige/40 pt-3 text-xs">
+                                                {postulacion.documentacion_completa ? (
+                                                    <span className="inline-flex items-center gap-1.5 font-semibold text-green-700">
+                                                        <CheckCircle2 className="h-4 w-4" />
+                                                        Documentación completa (3/3)
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1.5 font-semibold text-cafe">
+                                                        <FileCheck2 className="h-4 w-4" />
+                                                        Documentación pendiente
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </article>
+                                    )
+                                })}
+                            </div>
+                        )}
                     </div>
                 )}
             </section>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router'
 import GatoCard, { type EstadoGato, type SexoGato } from '../../components/GatoCard'
 import teoFoto from '../../assets/teo.jfif'
 
@@ -61,11 +62,11 @@ export default function PublicCatalog() {
             activo = false
         }
     }, [])
+    
+    const navigate = useNavigate()
 
     function handleAdoptar(codigo: string) {
-        alert(
-            `¡Gracias por tu interés en adoptar a (${codigo})! Por favor visítanos en Teo Cat Café o comunícate con la administración.`
-        )
+        navigate(`/adoptar/${codigo}`)
     }
 
     // Filtrado seguro contra valores nulos o indefinidos

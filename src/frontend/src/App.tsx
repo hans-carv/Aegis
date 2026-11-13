@@ -9,6 +9,7 @@ import RegistrarGato from './pages/admin/RegistrarGato'
 import HorariosAforo from './pages/admin/HorariosAforo'
 import PublicCatalog from './pages/public/PublicCatalog'
 import ReservarVisita from './pages/public/ReservarVisita'
+import PortularAdopcion from './pages/public/PostularAdopcion'
 import MiPerfil from './pages/public/MiPerfil'
 import Home from './pages/public/Home'
 import Login from './pages/auth/Login'
@@ -26,6 +27,7 @@ export default function App() {
                         <Route path="/visita" element={<ReservarVisita />} />
                         <Route element={<ProtectedRoute />}>
                             <Route path="/perfil" element={<MiPerfil />} />
+                            <Route path="/adoptar/:gatoId" element={<PortularAdopcion />} />
                         </Route>
                     </Route>
 
