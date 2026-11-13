@@ -93,8 +93,9 @@ export default function MiPerfil() {
             prev.map((p) => (p.id === actualizada.id ? actualizada : p))
         )
         setPostulacionACancelar(null)
+        const nombreGato = (actualizada as any).felinoNombre || (postulacionACancelar as any).felinoNombre || 'el felino'
         setMensajePostulacion(
-            `Tu solicitud para ${actualizada.gatoId} fue cancelada. El felino volvió a estar disponible en el catálogo.`
+            `Tu solicitud para ${nombreGato} fue cancelada. El felino volvió a estar disponible en el catálogo.`
         )
     }
 

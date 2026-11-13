@@ -127,13 +127,18 @@ export async function listarMisPostulaciones(
     emailUsuario?: string
 ): Promise<PostulacionRegistrada[]> {
     try {
-        const todas = await listarPostulacionesAdmin()
-        if (!emailUsuario) return todas
-        return todas.filter(
-            (p) => p.postulanteEmail?.toLowerCase() === emailUsuario.toLowerCase()
-        )
+        const res = await apiRequest<{ ok: boolean; data: PostulacionRegistrada[] }>('/postulaciones/mis-postulaciones')
+        return res.data || []
     } catch {
-        return []
+        try {
+            const todas = await listarPostulacionesAdmin()
+            if (!emailUsuario) return todas
+            return todas.filter(
+                (p) => p.postulanteEmail?.toLowerCase() === emailUsuario.toLowerCase()
+            )
+        } catch {
+            return []
+        }
     }
 }
 
