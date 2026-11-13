@@ -6,7 +6,17 @@ export class PostulacionesService {
    * HU: Registro inmutable de postulación de adopción
    */
   static async crearPostulacion(usuarioId: string, dto: CreatePostulacionDto) {
-    const { gatoId, presupuestoMensual, telefonoContacto, direccionDomicilio, cuestionario } = dto;
+    const gatoId = dto.gatoId;
+    const presupuestoMensual = dto.presupuestoMensual;
+    const telefonoContacto = dto.telefonoContacto;
+    const direccionDomicilio = dto.direccionDomicilio;
+    const cuestionario = dto.cuestionario || {
+      tieneMallasProteccion: (dto as any).tieneMallasProteccion,
+      permisoPropietario: (dto as any).permisoPropietario,
+      compromisoTenenciaResponsable: (dto as any).compromisoTenenciaResponsable,
+      otrosAnimalesEnCasa: (dto as any).otrosAnimalesEnCasa || 'Ninguno',
+      tiempoSoloAlDiaHoras: (dto as any).tiempoSoloAlDiaHoras ?? 0,
+    };
 
     if (
       !gatoId ||
@@ -105,10 +115,39 @@ export class PostulacionesService {
         p.direccion_domicilio AS "direccionDomicilio",
         p.cuestionario_vivienda AS "cuestionario",
         p.created_at AS "createdAt",
+        p.documentacion_completa AS "documentacionCompleta",
+        p.motivo_baja AS "motivoBaja",
+        p.cancelado_por AS "canceladoPor",
+        p.fecha_baja AS "fechaBaja",
         u.nombre_completo AS "postulanteNombre",
         u.email AS "postulanteEmail",
         g.nombre AS "gatoNombre",
-        g.id AS "gatoId"
+        g.id AS "gatoId",
+        COALESCE(
+          (
+            SELECT json_agg(json_build_object(
+              'id', d.id,
+              'campo', CASE d.tipo_documento
+                WHEN 'CARNET_IDENTIDAD' THEN 'carnetIdentidad'
+                WHEN 'FACTURA_SERVICIO' THEN 'facturaServicio'
+                WHEN 'CROQUIS_DOMICILIO' THEN 'croquisDomicilio'
+                ELSE d.tipo_documento
+              END,
+              'etiqueta', CASE d.tipo_documento
+                WHEN 'CARNET_IDENTIDAD' THEN 'Cédula de identidad'
+                WHEN 'FACTURA_SERVICIO' THEN 'Comprobante de servicios básicos'
+                WHEN 'CROQUIS_DOMICILIO' THEN 'Croquis del domicilio'
+                ELSE 'Documento de respaldo'
+              END,
+              'cargado', true,
+              'tipoMime', d.mime_type,
+              'nombreArchivo', d.nombre_archivo_original
+            ))
+            FROM public.documentos_postulacion d
+            WHERE d.postulacion_id = p.id
+          ),
+          '[]'::json
+        ) AS "documentos"
       FROM public.postulaciones_adopcion p
       JOIN public.usuarios u ON p.usuario_id = u.id
       JOIN public.gatos g ON p.gato_id = g.id
@@ -129,7 +168,32 @@ export class PostulacionesService {
     sql += ' ORDER BY p.created_at DESC;';
 
     const res = await query(sql, params);
-    return res.rows;
+    return res.rows.map((row: any) => {
+      const c = typeof row.cuestionario === 'string' ? JSON.parse(row.cuestionario) : (row.cuestionario || {});
+      return {
+        ...row,
+        felinoNombre: row.gatoNombre,
+        gatoNombre: row.gatoNombre,
+        cuestionario: c,
+        tieneMallasProteccion: c.tieneMallasProteccion ?? false,
+        permisoPropietario: c.permisoPropietario ?? false,
+        compromisoTenenciaResponsable: c.compromisoTenenciaResponsable ?? false,
+        otrosAnimalesEnCasa: c.otrosAnimalesEnCasa || '',
+        tiempoSoloAlDiaHoras: c.tiempoSoloAlDiaHoras,
+        fechaPostulacion: row.createdAt ? new Date(row.createdAt).toISOString().split('T')[0] : '',
+        documentacion_completa: Boolean(row.documentacionCompleta),
+        motivo_baja: row.motivoBaja || undefined,
+        cancelada_por: row.canceladoPor || undefined,
+        fecha_baja: row.fechaBaja || undefined,
+        documentos: Array.isArray(row.documentos) && row.documentos.length > 0
+          ? row.documentos
+          : [
+              { campo: 'carnetIdentidad', etiqueta: 'Cédula de identidad', cargado: false, tipoMime: 'image/png', nombreArchivo: '' },
+              { campo: 'facturaServicio', etiqueta: 'Comprobante de servicios básicos', cargado: false, tipoMime: 'application/pdf', nombreArchivo: '' },
+              { campo: 'croquisDomicilio', etiqueta: 'Croquis del domicilio', cargado: false, tipoMime: 'image/png', nombreArchivo: '' },
+            ],
+      };
+    });
   }
 
   /**

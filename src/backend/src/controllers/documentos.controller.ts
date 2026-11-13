@@ -45,3 +45,22 @@ export const verDocumentoAdminController = async (req: Request, res: Response): 
     res.status(500).json({ message: 'Error al desencriptar el documento.' });
   }
 };
+
+export const verDocumentoPorPostulacionYCampoController = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const postulacionId = Array.isArray(req.params.postulacionId) ? req.params.postulacionId[0] : (req.params.postulacionId as string);
+    const campo = Array.isArray(req.params.campo) ? req.params.campo[0] : (req.params.campo as string);
+
+    const doc = await DocumentosService.descargarODesencriptarPorPostulacionYCampo(postulacionId, campo);
+    res.setHeader('Content-Type', doc.mimeType);
+    res.setHeader('Content-Disposition', `inline; filename="${doc.nombreArchivo}"`);
+    res.status(200).send(doc.buffer);
+  } catch (error: any) {
+    if (error.status) {
+      res.status(error.status).json({ message: error.message });
+      return;
+    }
+    console.error('ERROR EN VISOR DOCUMENTO POR CAMPO:', error);
+    res.status(500).json({ message: 'Error al desencriptar el documento.' });
+  }
+};

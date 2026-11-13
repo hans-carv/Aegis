@@ -1,51 +1,51 @@
+import { apiRequest } from './api'
 import type { FranjaHoraria, FranjaHorariaPayload } from '../types/horario'
 
-let franjasMock: FranjaHoraria[] = [
-    {
-        id: 'franja-1',
-        diaSemana: 'LUNES',
-        horaInicio: '10:00',
-        horaFin: '12:00',
-        aforoMaximo: 10,
-        activo: true,
-    },
-    {
-        id: 'franja-2',
-        diaSemana: 'LUNES',
-        horaInicio: '15:00',
-        horaFin: '17:00',
-        aforoMaximo: 8,
-        activo: false,
-        motivoBloqueo: 'Limpieza profunda y desinfección de sala',
-    },
-    {
-        id: 'franja-3',
-        diaSemana: 'SABADO',
-        horaInicio: '11:00',
-        horaFin: '13:00',
-        aforoMaximo: 12,
-        activo: true,
-    },
-]
+function normalizarHora(hora: string): string {
+    if (!hora) return ''
+    return hora.length > 5 ? hora.slice(0, 5) : hora
+}
 
 export async function listarFranjas(): Promise<FranjaHoraria[]> {
-    await new Promise((resolve) => setTimeout(resolve, 400))
-    return [...franjasMock]
+    const res = await apiRequest<{ ok: boolean; data: FranjaHoraria[] }>('/admin/horarios')
+    return (res.data || []).map((f) => ({
+        ...f,
+        horaInicio: normalizarHora(f.horaInicio),
+        horaFin: normalizarHora(f.horaFin),
+    }))
 }
 
 export async function crearFranja(payload: FranjaHorariaPayload): Promise<FranjaHoraria> {
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    const nueva: FranjaHoraria = {
-        ...payload,
-        id: `franja-${Date.now()}`,
+    const res = await apiRequest<{ ok: boolean; data: FranjaHoraria }>('/admin/horarios', {
+        method: 'POST',
+        body: JSON.stringify({
+            diaSemana: payload.diaSemana,
+            horaInicio: payload.horaInicio,
+            horaFin: payload.horaFin,
+            aforoMaximo: Number(payload.aforoMaximo),
+        }),
+    })
+    return {
+        ...res.data,
+        horaInicio: normalizarHora(res.data.horaInicio),
+        horaFin: normalizarHora(res.data.horaFin),
     }
-    franjasMock = [...franjasMock, nueva]
-    return nueva
 }
 
 export async function actualizarFranja(id: string, payload: FranjaHorariaPayload): Promise<FranjaHoraria> {
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    const actualizada: FranjaHoraria = { ...payload, id }
-    franjasMock = franjasMock.map((f) => (f.id === id ? actualizada : f))
-    return actualizada
+    const res = await apiRequest<{ ok: boolean; data: FranjaHoraria }>(`/admin/horarios/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+            horaInicio: payload.horaInicio,
+            horaFin: payload.horaFin,
+            aforoMaximo: Number(payload.aforoMaximo),
+            activo: payload.activo,
+            motivoBloqueo: payload.motivoBloqueo,
+        }),
+    })
+    return {
+        ...res.data,
+        horaInicio: normalizarHora(res.data.horaInicio),
+        horaFin: normalizarHora(res.data.horaFin),
+    }
 }
