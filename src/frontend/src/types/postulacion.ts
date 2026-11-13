@@ -23,6 +23,7 @@ export interface DocumentosPostulacionFiles {
 
 export type EstadoPostulacion =
     | 'PENDIENTE_REVISION'
+    | 'EN_REVISION'
     | 'APROBADA'
     | 'FINALIZADA'
     | 'CANCELADA'

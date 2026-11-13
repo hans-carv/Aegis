@@ -28,3 +28,6 @@ Thumbs.db
 
 # Archivos temporales de ts-node-dev
 .ts-node-dev*
+
+# Archivos subidos cifrados
+uploads_encrypted/

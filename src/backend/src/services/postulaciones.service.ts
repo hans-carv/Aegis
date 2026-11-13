@@ -125,6 +125,7 @@ export class PostulacionesService {
         u.nombre_completo AS "postulanteNombre",
         u.email AS "postulanteEmail",
         g.nombre AS "gatoNombre",
+        g.codigo_felino AS "codigoFelino",
         g.id AS "gatoId",
         COALESCE(
           (

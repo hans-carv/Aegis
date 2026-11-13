@@ -6,6 +6,7 @@ import type {
     PostulacionRegistrada,
     NombreCampoDocumento,
     PostulacionAdmin,
+    EstadoPostulacion,
 } from '../types/postulacion'
 
 export class PostulacionApiError extends Error {
@@ -144,8 +145,19 @@ export async function listarMisPostulaciones(
 
 export async function listarPostulacionesAdmin(): Promise<PostulacionAdmin[]> {
     try {
-        const res = await apiRequest<{ ok: boolean; data: PostulacionAdmin[] }>('/postulaciones/admin')
-        return res.data || []
+        const res = await apiRequest<{ ok: boolean; data: any[] }>('/postulaciones/admin')
+        const items = res.data || []
+        return items.map((p) => {
+            const estado = (p.estado === 'EN_REVISION' ? 'PENDIENTE_REVISION' : (p.estado || 'PENDIENTE_REVISION')) as EstadoPostulacion
+            return {
+                ...p,
+                estado,
+                felinoNombre: p.felinoNombre || p.gatoNombre || 'Felino',
+                gatoId: p.codigoFelino || p.codigo_felino || p.gatoId || '',
+                fechaPostulacion: p.fechaPostulacion || (p.createdAt ? new Date(p.createdAt).toISOString().split('T')[0] : ''),
+                documentacion_completa: Boolean(p.documentacion_completa ?? p.documentacionCompleta),
+            }
+        })
     } catch (err: any) {
         throw new PostulacionApiError(err.status || 500, err.message || 'Error al listar postulaciones.')
     }

@@ -13,6 +13,10 @@ const BADGE_ESTADO: Record<EstadoPostulacion, { etiqueta: string; clases: string
         etiqueta: 'Pendiente de revisión',
         clases: 'bg-amber-100 text-cafe ring-beige',
     },
+    EN_REVISION: {
+        etiqueta: 'Pendiente de revisión',
+        clases: 'bg-amber-100 text-cafe ring-beige',
+    },
     APROBADA: {
         etiqueta: 'Aprobada',
         clases: 'bg-green-100 text-green-800 ring-green-300',
@@ -31,18 +35,35 @@ const BADGE_ESTADO: Record<EstadoPostulacion, { etiqueta: string; clases: string
     },
 }
 
-function formatearFecha(fechaISO: string) {
-    const [y, m, d] = fechaISO.split('-').map(Number)
-    return new Date(y, m - 1, d).toLocaleDateString('es-ES', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-    })
+function obtenerBadgeEstado(estado?: string) {
+    if (estado && estado in BADGE_ESTADO) {
+        return BADGE_ESTADO[estado as EstadoPostulacion]
+    }
+    return BADGE_ESTADO.PENDIENTE_REVISION
+}
+
+function formatearFecha(fechaISO?: string) {
+    if (!fechaISO) return '—'
+    try {
+        const parteFecha = fechaISO.includes('T') ? fechaISO.split('T')[0] : fechaISO
+        const partes = parteFecha.split('-').map(Number)
+        if (partes.length < 3 || isNaN(partes[0]) || isNaN(partes[1]) || isNaN(partes[2])) {
+            return fechaISO
+        }
+        return new Date(partes[0], partes[1] - 1, partes[2]).toLocaleDateString('es-ES', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+        })
+    } catch {
+        return fechaISO
+    }
 }
 
 export default function GestionPostulaciones() {
     const [postulaciones, setPostulaciones] = useState<PostulacionAdmin[]>([])
     const [cargando, setCargando] = useState(true)
+    const [errorCarga, setErrorCarga] = useState<string | null>(null)
 
     // Filtros
     const [filtroFelino, setFiltroFelino] = useState('')
@@ -64,18 +85,26 @@ export default function GestionPostulaciones() {
 
     useEffect(() => {
         listarPostulacionesAdmin()
-            .then(setPostulaciones)
+            .then((data) => {
+                setPostulaciones(data)
+                setErrorCarga(null)
+            })
+            .catch((err) => {
+                console.error('Error al cargar postulaciones admin:', err)
+                setErrorCarga(err.message || 'Error al cargar las postulaciones.')
+            })
             .finally(() => setCargando(false))
     }, [])
 
     const postulacionesFiltradas = useMemo(() => {
         return postulaciones.filter((p) => {
-            const coincideFelino =
-                !filtroFelino.trim() ||
-                p.felinoNombre.toLowerCase().includes(filtroFelino.toLowerCase()) ||
-                p.gatoId.toLowerCase().includes(filtroFelino.toLowerCase())
+            const felino = (p.felinoNombre || '').toLowerCase()
+            const idGato = (p.gatoId || '').toLowerCase()
+            const filtro = filtroFelino.trim().toLowerCase()
+            const coincideFelino = !filtro || felino.includes(filtro) || idGato.includes(filtro)
 
-            const coincideFecha = !filtroFecha || p.fechaPostulacion === filtroFecha
+            const fechaP = p.fechaPostulacion || ''
+            const coincideFecha = !filtroFecha || fechaP === filtroFecha
 
             return coincideFelino && coincideFecha
         })
@@ -105,7 +134,7 @@ export default function GestionPostulaciones() {
 
     // VISTA DETALLE: EXPEDIENTE ADMINISTRATIVO EN MODO LECTURA
     if (expedienteSeleccionado) {
-        const badge = BADGE_ESTADO[expedienteSeleccionado.estado]
+        const badge = obtenerBadgeEstado(expedienteSeleccionado.estado)
 
         return (
             <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
@@ -144,6 +173,7 @@ export default function GestionPostulaciones() {
                         </div>
 
                         {(expedienteSeleccionado.estado === 'PENDIENTE_REVISION' ||
+                            expedienteSeleccionado.estado === 'EN_REVISION' ||
                             expedienteSeleccionado.estado === 'APROBADA') && (
                             <button
                                 type="button"
@@ -459,6 +489,14 @@ export default function GestionPostulaciones() {
                 )}
             </section>
 
+            {/* Alerta de error si falla la carga */}
+            {errorCarga && (
+                <div role="alert" className="rounded-2xl bg-red-50 p-4 text-sm font-medium text-red-800 ring-1 ring-red-200">
+                    <p className="font-bold">Error al cargar postulaciones</p>
+                    <p className="mt-1 text-xs">{errorCarga}</p>
+                </div>
+            )}
+
             {/* Bandeja de Postulaciones */}
             {cargando ? (
                 <div className="space-y-3">
@@ -492,7 +530,7 @@ export default function GestionPostulaciones() {
                             </thead>
                             <tbody className="divide-y divide-beige/40">
                                 {postulacionesFiltradas.map((item) => {
-                                    const badge = BADGE_ESTADO[item.estado]
+                                    const badge = obtenerBadgeEstado(item.estado)
 
                                     return (
                                         <tr key={item.id} className="transition hover:bg-crema/35">

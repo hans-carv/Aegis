@@ -37,6 +37,10 @@ const ESTILO_ESTADO_POSTULACION: Record<EstadoPostulacion, { etiqueta: string; c
         etiqueta: 'Pendiente de revisión',
         clases: 'bg-amber-100 text-cafe ring-beige',
     },
+    EN_REVISION: {
+        etiqueta: 'Pendiente de revisión',
+        clases: 'bg-amber-100 text-cafe ring-beige',
+    },
     APROBADA: {
         etiqueta: 'Aprobada',
         clases: 'bg-green-100 text-green-800 ring-green-300',
@@ -55,14 +59,21 @@ const ESTILO_ESTADO_POSTULACION: Record<EstadoPostulacion, { etiqueta: string; c
     },
 }
 
-function formatearFecha(fechaISO: string) {
-    const [y, m, d] = fechaISO.split('-').map(Number)
-    return new Date(y, m - 1, d).toLocaleDateString('es-ES', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-    })
+function formatearFecha(fechaISO?: string) {
+    if (!fechaISO) return '—'
+    try {
+        const parte = fechaISO.includes('T') ? fechaISO.split('T')[0] : fechaISO
+        const [y, m, d] = parte.split('-').map(Number)
+        if (!y || !m || !d) return fechaISO
+        return new Date(y, m - 1, d).toLocaleDateString('es-ES', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+        })
+    } catch {
+        return fechaISO
+    }
 }
 
 export default function MiPerfil() {
