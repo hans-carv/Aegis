@@ -1,4 +1,5 @@
 import type {
+    CancelarPostulacionPayload,
     CrearPostulacionPayload,
     DocumentosPostulacionFiles,
     PostulacionRegistrada,
@@ -20,7 +21,7 @@ const TIPOS_PERMITIDOS = ['application/pdf', 'image/jpeg', 'image/png']
 let postulacionesMock: PostulacionAdmin[] = [
     {
         id: 'post-101',
-        gatoId: 'CAT-PUB-01',
+        gatoId: 'CAT-PUB-03',
         felinoNombre: 'Oliver',
         postulanteNombre: 'Camila Mendoza',
         postulanteEmail: 'camila.mendoza@correo.com',
@@ -62,12 +63,12 @@ let postulacionesMock: PostulacionAdmin[] = [
     },
     {
         id: 'post-102',
-        gatoId: 'CAT-PUB-02',
+        gatoId: 'CAT-PUB-04',
         felinoNombre: 'Mía',
         postulanteNombre: 'Diego Paredes',
         postulanteEmail: 'diego.paredes@correo.com',
         fechaPostulacion: '2026-11-12',
-        estado: 'PENDIENTE_REVISION',
+        estado: 'APROBADA',
         documentacion_completa: false,
         presupuestoMensual: 280,
         telefonoContacto: '69823411',
@@ -107,7 +108,8 @@ let postulacionesMock: PostulacionAdmin[] = [
  * Paso A: POST /api/postulaciones
  */
 export async function crearPostulacion(
-    payload: CrearPostulacionPayload
+    payload: CrearPostulacionPayload,
+    datosUsuario: { nombre?: string; email?: string }
 ): Promise<PostulacionRegistrada> {
     await new Promise((resolve) => setTimeout(resolve, 600))
 
@@ -135,11 +137,26 @@ export async function crearPostulacion(
         )
     }
 
+    // Verifica si el felino ya tiene una solicitud activa (no cancelada ni rechazada)
+    const felinoOcupado = postulacionesMock.some(
+        (p) =>
+        p.gatoId === payload.gatoId &&
+        p.estado !== 'CANCELADA' &&
+        p.estado !== 'RECHAZADA'
+    )
+
+    if (felinoOcupado) {
+        throw new PostulacionApiError(
+        409,
+        'Ya tienes una postulación activa para este felino o ya se encuentra en proceso de adopción.'
+        )
+    }
+
     const nueva: PostulacionAdmin = {
         ...payload,
         id: `post-${Date.now()}`,
-        postulanteNombre: 'Usuario Registrado',
-        postulanteEmail: 'usuario@correo.com',
+        postulanteNombre: datosUsuario?.nombre || 'Usuario Registrado',
+        postulanteEmail: datosUsuario?.email || 'usuario@correo.com',
         felinoNombre: payload.gatoId,
         fechaPostulacion: new Date().toISOString().split('T')[0],
         estado: 'PENDIENTE_REVISION',
@@ -203,7 +220,7 @@ export async function subirDocumentosPostulacion(
         }
     }
 
-    // Simula cifrado AES-256 en backend y actualización de documentacion_completa
+    // Simula la actualización de la postulación con los documentos cargados
     const actualizada: PostulacionAdmin = {
         ...postulacion,
         documentacion_completa: true,
@@ -239,9 +256,15 @@ export async function subirDocumentosPostulacion(
     return actualizada
 }
 
-export async function listarMisPostulaciones(): Promise<PostulacionRegistrada[]> {
+export async function listarMisPostulaciones(
+    emailUsuario?: string
+): Promise<PostulacionRegistrada[]> {
     await new Promise((resolve) => setTimeout(resolve, 400))
-    return [...postulacionesMock]
+
+    if (!emailUsuario) return[]
+    return postulacionesMock.filter(
+        (p) => p.postulanteEmail.toLowerCase() === emailUsuario.toLowerCase()
+    )
 }
 
 export async function listarPostulacionesAdmin(): Promise<PostulacionAdmin[]> {
@@ -321,4 +344,80 @@ export async function obtenerDocumentoSeguroBlob(
         tipoMime: 'image/png',
         nombreArchivo: doc.nombreArchivo,
     }
+}
+
+export async function cancelarPostulacion(
+    postulacionId: string,
+    payload: CancelarPostulacionPayload,
+    contextoActor: { rol: 'ADMIN' | 'USUARIO'; emailUsuario?: string }
+): Promise<PostulacionAdmin> {
+    await new Promise((resolve) => setTimeout(resolve, 550))
+
+    const motivoLimpio = payload.motivo_baja?.trim()
+    if (!motivoLimpio) {
+        throw new PostulacionApiError(
+        400,
+        'El motivo de cancelación (motivo_baja) es obligatorio.'
+        )
+    }
+
+    const index = postulacionesMock.findIndex((p) => p.id === postulacionId)
+    if (index === -1) {
+        throw new PostulacionApiError(404, 'La postulación indicada no existe.')
+    }
+
+    const actual = postulacionesMock[index]
+
+    const emailsPropiosSimulados = [
+        contextoActor.emailUsuario,
+        'usuario@correo.com',
+        'camila.mendoza@correo.com',
+    ].filter(Boolean)
+
+    if (
+        contextoActor.rol !== 'ADMIN' &&
+        !emailsPropiosSimulados.includes(actual.postulanteEmail)
+    ) {
+        throw new PostulacionApiError(
+        403,
+        'No tienes autorización para cancelar una solicitud que pertenece a otro usuario.'
+        )
+    }
+
+    // Validar propiedad si quien cancela es un postulante (no ADMIN)
+    if (
+        contextoActor.rol !== 'ADMIN' &&
+        contextoActor.emailUsuario &&
+        actual.postulanteEmail !== contextoActor.emailUsuario &&
+        actual.postulanteEmail !== 'usuario@correo.com'
+    ) {
+        throw new PostulacionApiError(
+        403,
+        'No tienes autorización para cancelar una solicitud que pertenece a otro usuario.'
+        )
+    }
+
+    // HTTP 409: Si ya está finalizada con contrato firmado
+    if (actual.estado === 'FINALIZADA') {
+        throw new PostulacionApiError(
+        409,
+        'No es posible cancelar esta postulación porque el proceso ya fue finalizado con contrato firmado.'
+        )
+    }
+
+    if (actual.estado === 'CANCELADA') {
+        throw new PostulacionApiError(409, 'Esta postulación ya se encuentra cancelada.')
+    }
+
+    const fechaHoy = new Date().toISOString().split('T')[0]
+    const cancelada: PostulacionAdmin = {
+        ...actual,
+        estado: 'CANCELADA',
+        motivo_baja: motivoLimpio,
+        cancelada_por: contextoActor.rol === 'ADMIN' ? 'ADMIN' : 'POSTULANTE',
+        fecha_baja: fechaHoy,
+    }
+
+    postulacionesMock[index] = cancelada
+    return cancelada
 }

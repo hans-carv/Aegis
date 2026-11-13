@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import {
-    Calendar, CalendarPlus, CheckCircle2, Clock, FileCheck2,
+    Calendar, CalendarPlus, CheckCircle2, Clock, FileCheck2, Ban,
     Heart, LogOut, Mail, MapPin, Phone, ShieldCheck, Users
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
+import ModalCancelarPostulacion from '../../components/ModalCancelarPostulacion'
 import { listarMisReservas } from '../../services/reservasService'
-import { listarMisPostulaciones } from '../../services/postulacionesService'
+import { listarMisPostulaciones, cancelarPostulacion } from '../../services/postulacionesService'
 import type { EstadoReserva, ReservaUsuario } from '../../types/reserva'
 import type { EstadoPostulacion, PostulacionRegistrada } from '../../types/postulacion'
 
@@ -44,6 +45,14 @@ const ESTILO_ESTADO_POSTULACION: Record<EstadoPostulacion, { etiqueta: string; c
         etiqueta: 'Rechazada',
         clases: 'bg-red-100 text-red-800 ring-red-200',
     },
+    FINALIZADA: {
+        etiqueta: 'Finalizada (Contrato firmado)',
+        clases: 'bg-celeste/45 text-marino ring-celeste',
+    },
+    CANCELADA: {
+        etiqueta: 'Cancelada',
+        clases: 'bg-red-100 text-red-800 ring-red-200',
+    },
 }
 
 function formatearFecha(fechaISO: string) {
@@ -67,15 +76,37 @@ export default function MiPerfil() {
     const [postulaciones, setPostulaciones] = useState<PostulacionRegistrada[]>([])
     const [cargandoPostulaciones, setCargandoPostulaciones] = useState(true)
 
+    const [postulacionACancelar, setPostulacionACancelar] = useState<PostulacionRegistrada | null>(null)
+    const [mensajePostulacion, setMensajePostulacion] = useState<string | null>(null)
+
+    async function confirmarCancelacionUsuario(motivoBaja: string) {
+
+        if (!postulacionACancelar) return
+
+        const actualizada = await cancelarPostulacion(
+            postulacionACancelar.id,
+            { motivo_baja: motivoBaja },
+            { rol: 'USUARIO', emailUsuario: usuario?.email }
+        )
+
+        setPostulaciones((prev) =>
+            prev.map((p) => (p.id === actualizada.id ? actualizada : p))
+        )
+        setPostulacionACancelar(null)
+        setMensajePostulacion(
+            `Tu solicitud para ${actualizada.gatoId} fue cancelada. El felino volvió a estar disponible en el catálogo.`
+        )
+    }
+
     useEffect(() => {
         listarMisReservas()
             .then(setReservas)
             .finally(() => setCargandoReservas(false))
 
-        listarMisPostulaciones()
+        listarMisPostulaciones(usuario?.email)
             .then(setPostulaciones)
             .finally(() => setCargandoPostulaciones(false))
-    }, [])
+    }, [usuario?.email])
 
     function manejarCerrarSesion() {
         logout()
@@ -285,6 +316,25 @@ export default function MiPerfil() {
                             </Link>
                         </div>
 
+                        {mensajePostulacion && (
+                            <div
+                                role="alert"
+                                className="flex items-center justify-between gap-3 rounded-xl bg-green-50 p-4 text-sm font-medium text-green-900 ring-1 ring-green-600/30"
+                            >
+                                <div className="flex items-center gap-2.5">
+                                <CheckCircle2 className="h-5 w-5 shrink-0 text-green-700" />
+                                <span>{mensajePostulacion}</span>
+                                </div>
+                                <button
+                                type="button"
+                                onClick={() => setMensajePostulacion(null)}
+                                className="text-xs font-bold underline cursor-pointer"
+                                >
+                                Cerrar
+                                </button>
+                            </div>
+                        )}
+
                         {cargandoPostulaciones ? (
                             <div className="grid gap-4 sm:grid-cols-2">
                                 {[1, 2].map((n) => (
@@ -317,11 +367,18 @@ export default function MiPerfil() {
                                         ESTILO_ESTADO_POSTULACION[postulacion.estado] ||
                                         ESTILO_ESTADO_POSTULACION.PENDIENTE_REVISION
 
+                                    const puedeCancelar =
+                                        postulacion.estado === 'PENDIENTE_REVISION' ||
+                                        postulacion.estado === 'APROBADA'
+
                                     return (
                                         <article
                                             key={postulacion.id}
-                                            className="flex flex-col justify-between rounded-2xl bg-white p-5 shadow-[0_10px_30px_rgba(23,38,65,0.05)] ring-1 ring-beige/70"
-                                        >
+                                            className={`flex flex-col justify-between rounded-2xl p-5 shadow-[0_10px_30px_rgba(23,38,65,0.05)] ring-1 ${
+                                                postulacion.estado === 'CANCELADA'
+                                                    ? 'bg-white/70 ring-red-200/80'
+                                                    : 'bg-white ring-beige/70'
+                                            }`}                                        >
                                             <div>
                                                 <div className="flex items-start justify-between gap-2">
                                                     <div>
@@ -356,6 +413,19 @@ export default function MiPerfil() {
                                                         <span className="truncate">{postulacion.direccionDomicilio}</span>
                                                     </p>
                                                 </div>
+                                                {postulacion.estado === 'CANCELADA' && postulacion.motivo_baja && (
+                                                    <div className="mt-3 rounded-xl bg-red-50/80 p-3 text-xs text-red-900 ring-1 ring-red-200/80">
+                                                        <p className="font-bold">
+                                                            Motivo de baja ({postulacion.cancelada_por === 'ADMIN' ? 'Administración' : 'Postulante'}):
+                                                        </p>
+                                                        <p className="mt-0.5">{postulacion.motivo_baja}</p>
+                                                        {postulacion.fecha_baja && (
+                                                        <p className="mt-1 text-[11px] text-red-700/80">
+                                                            Fecha de baja: {postulacion.fecha_baja}
+                                                        </p>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
 
                                             <div className="mt-4 flex items-center justify-between border-t border-beige/40 pt-3 text-xs">
@@ -370,12 +440,29 @@ export default function MiPerfil() {
                                                         Documentación pendiente
                                                     </span>
                                                 )}
+                                                {puedeCancelar && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setPostulacionACancelar(postulacion)}
+                                                        className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 font-semibold text-red-700 transition hover:bg-red-50 cursor-pointer"
+                                                    >
+                                                        <Ban className="h-3.5 w-3.5" />
+                                                        <span>Cancelar solicitud</span>
+                                                    </button>
+                                                )}
                                             </div>
                                         </article>
                                     )
                                 })}
                             </div>
                         )}
+                        {/* Modal de Confirmación de Cancelación */}
+                        <ModalCancelarPostulacion
+                            abierto={Boolean(postulacionACancelar)}
+                            onCerrar={() => setPostulacionACancelar(null)}
+                            onConfirmar={confirmarCancelacionUsuario}
+                            identificadorFelino={postulacionACancelar?.gatoId || ''}
+                        />
                     </div>
                 )}
             </section>

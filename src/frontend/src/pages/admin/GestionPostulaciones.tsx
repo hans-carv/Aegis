@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
     ArrowLeft, Calendar, CheckCircle2, ClipboardList, Eye, FileCheck2, FileWarning, Filter,Home, Lock,
-    Mail, MapPin, Phone, Search, ShieldCheck, User, Wallet, XCircle,
+    Mail, MapPin, Phone, Search, ShieldCheck, User, Wallet, XCircle, Ban
 } from 'lucide-react'
 import VisorDocSeguroModal from '../../components/VisorDocSeguroModal'
-import { listarPostulacionesAdmin } from '../../services/postulacionesService'
+import ModalCancelarPostulacion from '../../components/ModalCancelarPostulacion'
+import { listarPostulacionesAdmin, cancelarPostulacion } from '../../services/postulacionesService'
 import type { EstadoPostulacion, NombreCampoDocumento, PostulacionAdmin } from '../../types/postulacion'
 
 const BADGE_ESTADO: Record<EstadoPostulacion, { etiqueta: string; clases: string }> = {
@@ -18,6 +19,14 @@ const BADGE_ESTADO: Record<EstadoPostulacion, { etiqueta: string; clases: string
     },
     RECHAZADA: {
         etiqueta: 'Rechazada',
+        clases: 'bg-red-100 text-red-800 ring-red-200',
+    },
+    FINALIZADA: {
+        etiqueta: 'Finalizada (Contrato firmado)',
+        clases: 'bg-celeste/45 text-marino ring-celeste',
+    },
+    CANCELADA: {
+        etiqueta: 'Cancelada',
         clases: 'bg-red-100 text-red-800 ring-red-200',
     },
 }
@@ -72,6 +81,28 @@ export default function GestionPostulaciones() {
         })
     }, [postulaciones, filtroFelino, filtroFecha])
 
+    const [modalBajaAbierto, setModalBajaAbierto] = useState(false)
+    const [alertaAdmin, setAlertaAdmin] = useState<string | null>(null)
+
+    async function confirmarBajaAdmin(motivoBaja: string) {
+        if (!expedienteSeleccionado) return
+
+        const actualizada = await cancelarPostulacion(
+            expedienteSeleccionado.id,
+            { motivo_baja: motivoBaja },
+            { rol: 'ADMIN' }
+        )
+
+        setPostulaciones((prev) =>
+            prev.map((p) => (p.id === actualizada.id ? actualizada : p))
+        )
+        setExpedienteSeleccionado(actualizada)
+        setModalBajaAbierto(false)
+        setAlertaAdmin(
+            `La postulación de ${actualizada.postulanteNombre} fue cancelada y ${actualizada.felinoNombre} (${actualizada.gatoId}) volvió a estar disponible en el catálogo.`
+        )
+    }
+
     // VISTA DETALLE: EXPEDIENTE ADMINISTRATIVO EN MODO LECTURA
     if (expedienteSeleccionado) {
         const badge = BADGE_ESTADO[expedienteSeleccionado.estado]
@@ -106,11 +137,59 @@ export default function GestionPostulaciones() {
                         </p>
                     </div>
 
-                    <div className="inline-flex items-center gap-2 self-start rounded-xl bg-crema px-3.5 py-2 text-xs font-semibold text-cafe ring-1 ring-beige">
-                        <Lock className="h-4 w-4 shrink-0" />
-                        <span>Cuestionario en modo lectura (Inmutable)</span>
+                    <div className="flex flex-wrap items-center gap-2.5 self-start">
+                        <div className="inline-flex items-center gap-2 rounded-xl bg-crema px-3.5 py-2 text-xs font-semibold text-cafe ring-1 ring-beige">
+                            <Lock className="h-4 w-4 shrink-0" />
+                            <span>Modo lectura</span>
+                        </div>
+
+                        {(expedienteSeleccionado.estado === 'PENDIENTE_REVISION' ||
+                            expedienteSeleccionado.estado === 'APROBADA') && (
+                            <button
+                                type="button"
+                                onClick={() => setModalBajaAbierto(true)}
+                                className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100 cursor-pointer"
+                            >
+                                <Ban className="h-4 w-4" />
+                                <span>Cancelar solicitud</span>
+                            </button>
+                        )}
                     </div>
                 </div>
+
+                {/* Alerta de confirmación tras cancelar */}
+                {alertaAdmin && (
+                    <div
+                        role="alert"
+                        className="flex items-center justify-between gap-3 rounded-xl bg-green-50 p-4 text-sm font-medium text-green-900 ring-1 ring-green-600/30"
+                    >
+                        <div className="flex items-center gap-2.5">
+                            <CheckCircle2 className="h-5 w-5 shrink-0 text-green-700" />
+                            <span>{alertaAdmin}</span>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setAlertaAdmin(null)}
+                            className="text-xs font-bold underline cursor-pointer"
+                        >
+                            Cerrar
+                        </button>
+                    </div>
+                )}
+
+                {/* Banner de Auditoría si la solicitud fue CANCELADA */}
+                {expedienteSeleccionado.estado === 'CANCELADA' && (
+                    <div className="rounded-2xl bg-red-50 p-4 text-sm text-red-900 ring-1 ring-red-200">
+                        <p className="font-heading font-bold">Solicitud cancelada</p>
+                        <p className="mt-1 text-xs">
+                            <strong>Motivo de baja:</strong> {expedienteSeleccionado.motivo_baja}
+                        </p>
+                        <p className="mt-1 text-xs text-red-800/80">
+                            Cancelado por: <strong>{expedienteSeleccionado.cancelada_por}</strong> · Fecha de baja:{' '}
+                            <strong>{expedienteSeleccionado.fecha_baja}</strong>
+                        </p>
+                    </div>
+                )}
 
                 {/* SECCIÓN 1: Información del Postulante */}
                 <section
@@ -300,6 +379,14 @@ export default function GestionPostulaciones() {
                     postulacionId={expedienteSeleccionado.id}
                     campo={visorDoc.campo}
                     tituloDocumento={visorDoc.titulo}
+                />
+                <ModalCancelarPostulacion
+                    abierto={modalBajaAbierto}
+                    onCerrar={() => setModalBajaAbierto(false)}
+                    onConfirmar={confirmarBajaAdmin}
+                    esAdmin
+                    identificadorFelino={`${expedienteSeleccionado.felinoNombre} (${expedienteSeleccionado.gatoId})`}
+                    nombrePostulante={expedienteSeleccionado.postulanteNombre}
                 />
             </div>
         )

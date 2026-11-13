@@ -8,6 +8,7 @@ import DocumentoDropzone from '../../components/DocumentoDropZone'
 import { crearPostulacion, PostulacionApiError, subirDocumentosPostulacion,
 } from '../../services/postulacionesService'
 import type { NombreCampoDocumento, PostulacionRegistrada } from '../../types/postulacion'
+import { useAuth } from '../../hooks/useAuth'
 
 const PASOS = [
     { numero: 1, titulo: 'Datos del postulante', icono: UserCheck },
@@ -18,6 +19,7 @@ const PASOS = [
 
 export default function PostularAdopcion() {
     const { gatoId } = useParams<{ gatoId: string }>()
+    const { usuario } = useAuth()
 
     const [pasoActual, setPasoActual] = useState(1)
     const [errorPaso, setErrorPaso] = useState<string | null>(null)
@@ -121,7 +123,8 @@ export default function PostularAdopcion() {
         try {
             // 1. Crear la postulación (POST /api/postulaciones)
             setEstadoProceso('Registrando datos de tu postulación...')
-            const postulacionCreada = await crearPostulacion({
+            const postulacionCreada = await crearPostulacion(
+                {
                 gatoId,
                 presupuestoMensual: Number(presupuestoMensual),
                 telefonoContacto: telefonoContacto.trim(),
@@ -131,7 +134,9 @@ export default function PostularAdopcion() {
                 compromisoTenenciaResponsable,
                 ...(otrosAnimalesEnCasa.trim() ? { otrosAnimalesEnCasa: otrosAnimalesEnCasa.trim() } : {}),
                 ...(tiempoSoloAlDiaHoras !== '' ? { tiempoSoloAlDiaHoras: Number(tiempoSoloAlDiaHoras) } : {}),
-            })
+                }, 
+                { nombre: usuario?.nombre, email:usuario?.email,}
+            )
 
             // 2. Subir los documentos con el ID devuelto (multipart/form-data)
             setEstadoProceso('Cifrando y subiendo documentación...')

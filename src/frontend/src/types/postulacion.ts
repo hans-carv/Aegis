@@ -24,13 +24,22 @@ export interface DocumentosPostulacionFiles {
 export type EstadoPostulacion =
     | 'PENDIENTE_REVISION'
     | 'APROBADA'
+    | 'FINALIZADA'
+    | 'CANCELADA'
     | 'RECHAZADA'
+
+export interface CancelarPostulacionPayload {
+    motivo_baja: string
+}
 
 export interface PostulacionRegistrada extends CrearPostulacionPayload {
     id: string
     fechaPostulacion: string
     estado: EstadoPostulacion
     documentacion_completa: boolean
+    motivo_baja?: string
+    cancelada_por?: 'POSTULANTE' | 'ADMIN'
+    fecha_baja?: string
 }
 
 export interface EstadoDocumentoAdmin {
