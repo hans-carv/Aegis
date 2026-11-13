@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router'
-import { CalendarClock, Home, LogOut, PlusSquare, Cat } from 'lucide-react'
+import { CalendarClock, Home, LogOut, PlusSquare, Cat, ClipboardList } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import teoLogo from '../assets/teo.jfif'
 
@@ -8,6 +8,7 @@ const navItems = [
     { to: '/admin/ingresos', label: 'Ingresos de gatos', shortLabel: 'Ingresos', end: false, icon: PlusSquare },
     { to: '/admin/felinos', label: 'Felinos', shortLabel: 'Felinos', end: false, icon: Cat },
     { to: '/admin/horarios', label: 'Horarios de visita y aforo', shortLabel: 'Horarios', end: false, icon: CalendarClock },
+    { to: '/admin/postulaciones', label: 'Postulaciones de adopción', shortLabel: 'Postulaciones', end: false, icon: ClipboardList },
 ] as const
 
 function linkClass(isActive: boolean, compact: boolean) { 

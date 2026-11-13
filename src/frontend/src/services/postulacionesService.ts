@@ -2,6 +2,8 @@ import type {
     CrearPostulacionPayload,
     DocumentosPostulacionFiles,
     PostulacionRegistrada,
+    NombreCampoDocumento,
+    PostulacionAdmin,
 } from '../types/postulacion'
 
 export class PostulacionApiError extends Error {
@@ -15,7 +17,91 @@ export class PostulacionApiError extends Error {
 const MAX_BYTES = 5 * 1024 * 1024 // 5 MB
 const TIPOS_PERMITIDOS = ['application/pdf', 'image/jpeg', 'image/png']
 
-let postulacionesMock: PostulacionRegistrada[] = []
+let postulacionesMock: PostulacionAdmin[] = [
+    {
+        id: 'post-101',
+        gatoId: 'CAT-PUB-01',
+        felinoNombre: 'Oliver',
+        postulanteNombre: 'Camila Mendoza',
+        postulanteEmail: 'camila.mendoza@correo.com',
+        fechaPostulacion: '2026-11-10',
+        estado: 'PENDIENTE_REVISION',
+        documentacion_completa: true,
+        presupuestoMensual: 400,
+        telefonoContacto: '71548920',
+        direccionDomicilio: 'Sopocachi, Av. Ecuador #2410, Edif. Illimani Piso 3',
+        tieneMallasProteccion: true,
+        permisoPropietario: true,
+        compromisoTenenciaResponsable: true,
+        otrosAnimalesEnCasa: 'Sí, una gata adulta esterilizada y vacunada',
+        tiempoSoloAlDiaHoras: 4,
+        documentos: [
+
+            {
+                campo: 'carnetIdentidad',
+                etiqueta: 'Cédula de identidad',
+                cargado: true,
+                tipoMime: 'image/png',
+                nombreArchivo: 'ci_camila_mendoza.png',
+            },
+            {
+                campo: 'facturaServicio',
+                etiqueta: 'Comprobante de servicios básicos',
+                cargado: true,
+                tipoMime: 'application/pdf',
+                nombreArchivo: 'factura_luz_octubre.pdf',
+            },
+            {
+                campo: 'croquisDomicilio',
+                etiqueta: 'Croquis del domicilio',
+                cargado: true,
+                tipoMime: 'image/png',
+                nombreArchivo: 'croquis_sopocachi.png',
+            },
+        ],
+    },
+    {
+        id: 'post-102',
+        gatoId: 'CAT-PUB-02',
+        felinoNombre: 'Mía',
+        postulanteNombre: 'Diego Paredes',
+        postulanteEmail: 'diego.paredes@correo.com',
+        fechaPostulacion: '2026-11-12',
+        estado: 'PENDIENTE_REVISION',
+        documentacion_completa: false,
+        presupuestoMensual: 280,
+        telefonoContacto: '69823411',
+        direccionDomicilio: 'Miraflores, Calle Díaz Romero #1180',
+        tieneMallasProteccion: true,
+        permisoPropietario: true,
+        compromisoTenenciaResponsable: true,
+        otrosAnimalesEnCasa: 'No tengo otros animales',
+        tiempoSoloAlDiaHoras: 6,
+        documentos: [
+            {
+                campo: 'carnetIdentidad',
+                etiqueta: 'Cédula de identidad',
+                cargado: true,
+                tipoMime: 'image/png',
+                nombreArchivo: 'ci_diego_paredes.png',
+            },
+            {
+                campo: 'facturaServicio',
+                etiqueta: 'Comprobante de servicios básicos',
+                cargado: true,
+                tipoMime: 'image/png',
+                nombreArchivo: 'factura_agua.png',
+            },
+            {
+                campo: 'croquisDomicilio',
+                etiqueta: 'Croquis del domicilio',
+                cargado: false,
+                tipoMime: 'image/png',
+                nombreArchivo: '',
+            },
+        ],
+    },
+]
 
 /**
  * Paso A: POST /api/postulaciones
@@ -49,12 +135,20 @@ export async function crearPostulacion(
         )
     }
 
-    const nueva: PostulacionRegistrada = {
+    const nueva: PostulacionAdmin = {
         ...payload,
         id: `post-${Date.now()}`,
+        postulanteNombre: 'Usuario Registrado',
+        postulanteEmail: 'usuario@correo.com',
+        felinoNombre: payload.gatoId,
         fechaPostulacion: new Date().toISOString().split('T')[0],
         estado: 'PENDIENTE_REVISION',
         documentacion_completa: false,
+        documentos: [
+            { campo: 'carnetIdentidad', etiqueta: 'Cédula de identidad', cargado: false, tipoMime: 'application/pdf', nombreArchivo: '' },
+            { campo: 'facturaServicio', etiqueta: 'Comprobante de servicios básicos', cargado: false, tipoMime: 'application/pdf', nombreArchivo: '' },
+            { campo: 'croquisDomicilio', etiqueta: 'Croquis del domicilio', cargado: false, tipoMime: 'application/pdf', nombreArchivo: '' },
+        ],
     }
 
     postulacionesMock = [nueva, ...postulacionesMock]
@@ -110,9 +204,32 @@ export async function subirDocumentosPostulacion(
     }
 
     // Simula cifrado AES-256 en backend y actualización de documentacion_completa
-    const actualizada: PostulacionRegistrada = {
+    const actualizada: PostulacionAdmin = {
         ...postulacion,
         documentacion_completa: true,
+        documentos: [
+            {
+                campo: 'carnetIdentidad',
+                etiqueta: 'Cédula de identidad',
+                cargado: true,
+                tipoMime: archivos.carnetIdentidad.type as 'application/pdf' | 'image/jpeg' | 'image/png',
+                nombreArchivo: archivos.carnetIdentidad.name,
+            },
+            {
+                campo: 'facturaServicio',
+                etiqueta: 'Comprobante de servicios básicos',
+                cargado: true,
+                tipoMime: archivos.facturaServicio.type as 'application/pdf' | 'image/jpeg' | 'image/png',
+                nombreArchivo: archivos.facturaServicio.name,
+            },
+            {
+                campo: 'croquisDomicilio',
+                etiqueta: 'Croquis del domicilio',
+                cargado: true,
+                tipoMime: archivos.croquisDomicilio.type as 'application/pdf' | 'image/jpeg' | 'image/png',
+                nombreArchivo: archivos.croquisDomicilio.name,
+            },
+        ],
     }
 
     postulacionesMock = postulacionesMock.map((p) =>
@@ -125,4 +242,83 @@ export async function subirDocumentosPostulacion(
 export async function listarMisPostulaciones(): Promise<PostulacionRegistrada[]> {
     await new Promise((resolve) => setTimeout(resolve, 400))
     return [...postulacionesMock]
+}
+
+export async function listarPostulacionesAdmin(): Promise<PostulacionAdmin[]> {
+    await new Promise((resolve) => setTimeout(resolve, 450))
+    return [...postulacionesMock]
+}
+
+/**
+ * Simula GET /api/admin/postulaciones/:id/documentos/:campo con header Authorization: Bearer <JWT>
+ * Devuelve un Blob descifrado en memoria sin exponer URLs públicas ni rutas de servidor.
+ */
+export async function obtenerDocumentoSeguroBlob(
+    postulacionId: string,
+    campo: NombreCampoDocumento,
+    esAdmin: boolean
+): Promise<{ blob: Blob; tipoMime: string; nombreArchivo: string }> {
+    await new Promise((resolve) => setTimeout(resolve, 600))
+
+    if (!esAdmin) {
+        throw new PostulacionApiError(
+        403,
+        'Acceso denegado: se requiere autorización con rol ADMIN para descifrar este documento.'
+        )
+    }
+    const postulacion = postulacionesMock.find((p) => p.id === postulacionId)
+    if (!postulacion) {
+        throw new PostulacionApiError(404, 'Expediente de postulación no encontrado.')
+    }
+
+    const doc = postulacion.documentos.find((d) => d.campo === campo)
+    if (!doc || !doc.cargado) {
+        throw new PostulacionApiError(404, 'El documento solicitado no ha sido adjuntado.')
+    }
+
+    // Genera una vista previa en memoria (Canvas -> Blob) simulando el stream descifrado por AES-256
+    const canvas = document.createElement('canvas')
+    canvas.width = 800
+    canvas.height = 520
+    const ctx = canvas.getContext('2d')!
+
+    ctx.fillStyle = '#FAF7F0'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+    ctx.strokeStyle = '#172641'
+    ctx.lineWidth = 4
+    ctx.strokeRect(24, 24, canvas.width - 48, canvas.height - 48)
+
+    ctx.fillStyle = '#172641'
+    ctx.font = 'bold 26px sans-serif'
+    ctx.fillText('PROYECTO TEO · VISOR SEGURO DE EXPEDIENTE', 56, 85)
+
+    ctx.fillStyle = '#795548'
+    ctx.font = 'bold 18px sans-serif'
+    ctx.fillText(`Documento descifrado (AES-256): ${doc.etiqueta}`, 56, 130)
+
+    ctx.fillStyle = '#172641'
+    ctx.font = '16px sans-serif'
+    ctx.fillText(`Expediente ID: ${postulacion.id}`, 56, 185)
+    ctx.fillText(`Postulante: ${postulacion.postulanteNombre} (${postulacion.postulanteEmail})`, 56, 220)
+    ctx.fillText(`Felino solicitado: ${postulacion.felinoNombre} (${postulacion.gatoId})`, 56, 255)
+    ctx.fillText(`Archivo original: ${doc.nombreArchivo}`, 56, 290)
+
+    ctx.fillStyle = '#A9D6E8'
+    ctx.fillRect(56, 340, 688, 95)
+    ctx.fillStyle = '#172641'
+    ctx.font = 'bold 15px sans-serif'
+    ctx.fillText('Stream protegido cargado en memoria temporal (Blob ObjectURL).', 76, 380)
+    ctx.font = '14px sans-serif'
+    ctx.fillText('Al cerrar este visor, la referencia en memoria se revoca automáticamente.', 76, 408)
+
+    const blob: Blob = await new Promise((resolve) =>
+        canvas.toBlob((b) => resolve(b!), 'image/png')
+    )
+
+    return {
+        blob,
+        tipoMime: 'image/png',
+        nombreArchivo: doc.nombreArchivo,
+    }
 }

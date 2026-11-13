@@ -32,3 +32,18 @@ export interface PostulacionRegistrada extends CrearPostulacionPayload {
     estado: EstadoPostulacion
     documentacion_completa: boolean
 }
+
+export interface EstadoDocumentoAdmin {
+    campo: NombreCampoDocumento
+    etiqueta: string
+    cargado: boolean
+    tipoMime: 'application/pdf' | 'image/jpeg' | 'image/png'
+    nombreArchivo: string
+}
+
+export interface PostulacionAdmin extends PostulacionRegistrada {
+    postulanteNombre: string
+    postulanteEmail: string
+    felinoNombre: string
+    documentos: EstadoDocumentoAdmin[]
+}
