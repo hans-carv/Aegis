@@ -21,15 +21,22 @@ function formatearFechaISO(date: Date): string {
     return `${y}-${m}-${d}`
 }
 
-function formatearFechaLegible(fechaISO: string): string {
-    const [y, m, d] = fechaISO.split('-').map(Number)
-    const fecha = new Date(y, m - 1, d)
-    return fecha.toLocaleDateString('es-ES', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-    })
+function formatearFechaLegible(fechaISO?: string): string {
+    if (!fechaISO) return '—'
+    try {
+        const parte = fechaISO.includes('T') ? fechaISO.split('T')[0] : fechaISO
+        const [y, m, d] = parte.split('-').map(Number)
+        if (!y || !m || !d) return fechaISO
+        const fecha = new Date(y, m - 1, d)
+        return fecha.toLocaleDateString('es-ES', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+        })
+    } catch {
+        return fechaISO
+    }
 }
 
 export default function ReservarVisita() {

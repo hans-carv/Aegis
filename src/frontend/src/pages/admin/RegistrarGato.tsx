@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router'
 import GatoCard, { type EstadoGato, type SexoGato } from '../../components/GatoCard'
 import { useAuth } from '../../hooks/useAuth'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+const API_URL = import.meta.env.VITE_API_URL || '/api'
 
 type TallaFelino = 'Pequeño' | 'Mediano' | 'Grande'
 

@@ -217,7 +217,14 @@ export async function cancelarPostulacion(
             }
         )
 
-        return res.data
+        const raw = res.data || {}
+        return {
+            id: raw.id || postulacionId,
+            estado: 'CANCELADA',
+            motivo_baja: raw.motivo_baja || raw.motivoBaja || motivo,
+            cancelada_por: raw.cancelado_por || raw.canceladoPor || (_contextoActor?.rol === 'ADMIN' ? 'ADMIN' : 'POSTULANTE'),
+            fecha_baja: raw.fecha_baja || raw.fechaBaja || new Date().toISOString().split('T')[0],
+        } as any
     } catch (err: any) {
         throw new PostulacionApiError(err.status || 500, err.message || 'Error al cancelar postulación.')
     }

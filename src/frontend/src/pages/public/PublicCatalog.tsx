@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router'
 import GatoCard, { type EstadoGato, type SexoGato } from '../../components/GatoCard'
 import teoFoto from '../../assets/teo.jfif'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+const API_URL = import.meta.env.VITE_API_URL || '/api'
 
 interface FelinoPublico {
     id?: string
@@ -74,11 +74,12 @@ export default function PublicCatalog() {
         const query = busqueda.toLowerCase().trim()
         if (!query) return true
 
+        const coincideCodigo = g.codigoFelino?.toLowerCase().includes(query) ?? false
         const coincideNombre = g.nombre?.toLowerCase().includes(query) ?? false
         const coincideTemperamento = g.temperamento?.toLowerCase().includes(query) ?? false
         const coincidePelaje = g.colorPelaje?.toLowerCase().includes(query) ?? false
 
-        return coincideNombre || coincideTemperamento || coincidePelaje
+        return coincideCodigo || coincideNombre || coincideTemperamento || coincidePelaje
     })
 
     return (

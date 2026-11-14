@@ -91,14 +91,22 @@ export default function MiPerfil() {
     const [mensajePostulacion, setMensajePostulacion] = useState<string | null>(null)
 
     async function confirmarCancelacionUsuario(motivoBaja: string) {
-
         if (!postulacionACancelar) return
 
-        const actualizada = await cancelarPostulacion(
+        const datosCancelacion = await cancelarPostulacion(
             postulacionACancelar.id,
             { motivo_baja: motivoBaja },
             { rol: 'USUARIO', emailUsuario: usuario?.email }
         )
+
+        const actualizada: PostulacionRegistrada = {
+            ...postulacionACancelar,
+            ...datosCancelacion,
+            estado: 'CANCELADA',
+            motivo_baja: datosCancelacion.motivo_baja || motivoBaja,
+            cancelada_por: 'POSTULANTE',
+            fecha_baja: datosCancelacion.fecha_baja || new Date().toISOString().split('T')[0],
+        }
 
         setPostulaciones((prev) =>
             prev.map((p) => (p.id === actualizada.id ? actualizada : p))
@@ -381,7 +389,14 @@ export default function MiPerfil() {
 
                                     const puedeCancelar =
                                         postulacion.estado === 'PENDIENTE_REVISION' ||
+                                        postulacion.estado === 'EN_REVISION' ||
                                         postulacion.estado === 'APROBADA'
+
+                                    const nombreFelinoMostrar =
+                                        (postulacion as any).felinoNombre ||
+                                        (postulacion as any).gatoNombre ||
+                                        postulacion.gatoId ||
+                                        'Felino'
 
                                     return (
                                         <article
@@ -398,7 +413,7 @@ export default function MiPerfil() {
                                                             Felino seleccionado
                                                         </span>
                                                         <h3 className="font-heading text-lg font-bold text-marino">
-                                                            {postulacion.gatoId}
+                                                            {nombreFelinoMostrar}
                                                         </h3>
                                                     </div>
 

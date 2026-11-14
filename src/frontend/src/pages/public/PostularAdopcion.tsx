@@ -146,7 +146,11 @@ export default function PostularAdopcion() {
                 croquisDomicilio,
             })
 
-            setPostulacionCompletada(finalizada)
+            setPostulacionCompletada({
+                ...postulacionCreada,
+                ...finalizada,
+                gatoId: postulacionCreada.gatoId || gatoId || '',
+            })
         } catch (err) {
             if (err instanceof PostulacionApiError) {
                 setErrorPaso(err.message)

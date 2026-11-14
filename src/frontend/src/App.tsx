@@ -42,7 +42,7 @@ export default function App() {
                     <Route path="/register" element={<Register />} />
 
                     {/* Rutas de Administración */}
-                    <Route element={<ProtectedRoute />}>
+                    <Route element={<ProtectedRoute rolRequerido="ADMIN" />}>
                         <Route path="/admin" element={<AdminLayout />}>
                             <Route index element={<AdminHome />} />
                             <Route path="ingresos" element={<RegistrarIngreso />} />

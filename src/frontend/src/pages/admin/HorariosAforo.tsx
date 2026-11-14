@@ -24,9 +24,10 @@ for (let h = 8; h <= 21; h++) {
     if (h < 21) OPCIONES_HORAS.push(`${horaStr}:30`)
 }
 
-function aMinutos(hora: string): number {
+function aMinutos(hora?: string): number {
+    if (!hora) return 0
     const [h, m] = hora.split(':').map(Number)
-    return h * 60 + m
+    return (h || 0) * 60 + (m || 0)
 }
 
 export default function HorariosAforo() {
@@ -329,7 +330,7 @@ export default function HorariosAforo() {
                 <div className="space-y-6">
                     {DIAS_SEMANA.map((dia) => {
                         const franjasDelDia = franjas
-                            .filter((f) => f.diaSemana === dia.valor)
+                            .filter((f) => String(f.diaSemana || '').toUpperCase().trim() === dia.valor)
                             .sort((a, b) => aMinutos(a.horaInicio) - aMinutos(b.horaInicio))
 
                         if (franjasDelDia.length === 0) return null

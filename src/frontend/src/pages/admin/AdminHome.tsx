@@ -4,7 +4,7 @@ import GatoCard, { type EstadoGato, type SexoGato } from '../../components/GatoC
 import teoFoto from '../../assets/teo.jfif'
 import { useAuth } from '../../hooks/useAuth'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+const API_URL = import.meta.env.VITE_API_URL || '/api'
 
 interface GatoBackend {
     id: string

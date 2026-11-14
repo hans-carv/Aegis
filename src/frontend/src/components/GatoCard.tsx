@@ -40,7 +40,10 @@ const ESTADO_CONFIG: Record<EstadoGato, { etiqueta: string; estilo: string }> = 
     },
 }
 
-export function formatearEdad(edadMeses: number): string {
+export function formatearEdad(edadMeses?: number): string {
+    if (edadMeses === undefined || edadMeses === null || isNaN(edadMeses) || edadMeses < 0) {
+        return 'Edad no especificada'
+    }
     if (edadMeses < 12) {
         return `${edadMeses} ${edadMeses === 1 ? 'mes' : 'meses'}`
     }
@@ -68,7 +71,8 @@ export default function GatoCard({
     onAdoptar,
     accionesAdmin,
 }: GatoCardProps) {
-    const infoEstado = ESTADO_CONFIG[estado] || ESTADO_CONFIG.CUARENTENA
+    const estadoKey = (estado ? String(estado).toUpperCase() : '') as EstadoGato
+    const infoEstado = ESTADO_CONFIG[estadoKey] || ESTADO_CONFIG.CUARENTENA
     const [imgSrc, setImgSrc] = useState<string>(fotoUrl || teoFoto)
 
     useEffect(() => {
@@ -122,7 +126,7 @@ export default function GatoCard({
                         </div>
                         <div className="rounded-lg bg-crema p-2">
                             <span className="block text-[10px] uppercase tracking-wider text-cafe font-bold">Peso / Talla</span>
-                            <span className="font-semibold">{peso} kg {talla ? `· ${talla}` : ''}</span>
+                            <span className="font-semibold">{Number(peso) > 0 ? `${peso} kg` : '—'} {talla ? `· ${talla}` : ''}</span>
                         </div>
                     </div>
 
