@@ -9,6 +9,8 @@ import horariosRoutes from './routes/horarios.routes';
 import reservasRoutes from './routes/reservas.routes';
 import postulacionesRoutes from './routes/postulaciones.routes';
 import documentosRoutes from './routes/documentos.routes';
+import inmunizacionesRoutes from './routes/inmunizaciones.routes';
+import historialClinicoRoutes from './routes/historialClinico.routes';
 import { publicRoutes } from './routes/public.routes';
 
 dotenv.config();
@@ -26,11 +28,12 @@ app.use('/api/admin/horarios', horariosRoutes);
 app.use('/api/reservas', reservasRoutes);
 app.use('/api/postulaciones', postulacionesRoutes);
 app.use('/api/postulaciones', documentosRoutes);
+app.use('/api', inmunizacionesRoutes);
+app.use('/api', historialClinicoRoutes);
 
-// Endpoint publico
+
 app.use('/api/public', publicRoutes);
 
-// Endpoint de verificación
 app.get('/health', (_req, res) => {
   res.json({ ok: true, mensaje: 'Servidor levantado con exito' });
 });
