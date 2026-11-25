@@ -162,3 +162,45 @@ CREATE TABLE IF NOT EXISTS public.documentos_postulacion (
 );
 
 CREATE INDEX IF NOT EXISTS idx_documentos_postulacion_id ON public.documentos_postulacion(postulacion_id);
+
+-- 10. Sprint 3: Campos médicos en public.gatos
+ALTER TABLE public.gatos ADD COLUMN IF NOT EXISTS esterilizado BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.gatos ADD COLUMN IF NOT EXISTS resultado_vif VARCHAR(20) DEFAULT 'NO_REALIZADO';
+ALTER TABLE public.gatos ADD COLUMN IF NOT EXISTS resultado_vilef VARCHAR(20) DEFAULT 'NO_REALIZADO';
+ALTER TABLE public.gatos ADD COLUMN IF NOT EXISTS estado_medico VARCHAR(30) DEFAULT 'SANO';
+
+-- 11. Sprint 3 (SCRUM-68): Tabla tratamientos_clinicos
+CREATE TABLE IF NOT EXISTS public.tratamientos_clinicos (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    gato_id UUID NOT NULL REFERENCES public.gatos(id) ON DELETE CASCADE,
+    tipo_procedimiento VARCHAR(50) NOT NULL,
+    diagnostico TEXT NOT NULL,
+    descripcion_tratamiento TEXT NOT NULL,
+    es_esterilizacion BOOLEAN DEFAULT FALSE,
+    resultado_vif VARCHAR(20),
+    resultado_vilef VARCHAR(20),
+    estado_medico_resultante VARCHAR(30) DEFAULT 'SANO',
+    requiere_aislamiento_o_critico BOOLEAN DEFAULT FALSE,
+    veterinario_responsable VARCHAR(150) NOT NULL,
+    registrado_por UUID NOT NULL REFERENCES public.usuarios(id),
+    fecha_registro TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_tratamientos_clinicos_gato_id ON public.tratamientos_clinicos(gato_id);
+
+-- 12. Sprint 3 (SCRUM-76): Tabla controles_inmunologicos
+CREATE TABLE IF NOT EXISTS public.controles_inmunologicos (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    gato_id UUID NOT NULL REFERENCES public.gatos(id) ON DELETE CASCADE,
+    tipo_control VARCHAR(30) NOT NULL CHECK (tipo_control IN ('VACUNA', 'DESPARASITACION')),
+    nombre_biologico VARCHAR(150) NOT NULL,
+    fecha_aplicacion DATE NOT NULL,
+    fecha_proximo_refuerzo DATE NOT NULL,
+    lote VARCHAR(100),
+    veterinario_responsable VARCHAR(150),
+    observaciones TEXT,
+    registrado_por UUID NOT NULL REFERENCES public.usuarios(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_controles_inmunologicos_gato_id ON public.controles_inmunologicos(gato_id);

@@ -1,8 +1,10 @@
 import { Link } from 'react-router'
 import { useEffect, useState } from 'react'
 import GatoCard, { type EstadoGato, type SexoGato } from '../../components/GatoCard'
+import ModalExpedienteClinico from '../../components/ModalExpedienteClinico'
 import teoFoto from '../../assets/teo.jfif'
 import { useAuth } from '../../hooks/useAuth'
+import { Stethoscope } from 'lucide-react'
 
 const API_URL = import.meta.env.VITE_API_URL || '/api'
 
@@ -27,35 +29,36 @@ export default function AdminHome() {
     const [felinos, setFelinos] = useState<GatoBackend[]>([])
     const [cargando, setCargando] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [gatoParaModal, setGatoParaModal] = useState<GatoBackend | null>(null)
+
+    async function fetchFelinos() {
+        setCargando(true)
+        setError(null)
+
+        try {
+            const authToken = token || localStorage.getItem('teo_auth_token')
+
+            const response = await fetch(`${API_URL}/gatos`, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+                },
+            })
+
+            if (!response.ok) {
+                throw new Error(`Error ${response.status}: no se pudieron cargar los felinos.`)
+            }
+
+            const json = await response.json()
+            setFelinos(json.data || [])
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Error al conectar con el servidor')
+        } finally {
+            setCargando(false)
+        }
+    }
 
     useEffect(() => {
-        async function fetchFelinos() {
-            setCargando(true)
-            setError(null)
-
-            try {
-                const authToken = token || localStorage.getItem('teo_auth_token')
-
-                const response = await fetch(`${API_URL}/gatos`, {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-                    },
-                })
-
-                if (!response.ok) {
-                    throw new Error(`Error ${response.status}: no se pudieron cargar los felinos.`)
-                }
-
-                const json = await response.json()
-                setFelinos(json.data || [])
-            } catch (err) {
-                setError(err instanceof Error ? err.message : 'Error al conectar con el servidor')
-            } finally {
-                setCargando(false)
-            }
-        }
-
         fetchFelinos()
     }, [token])
 
@@ -71,7 +74,7 @@ export default function AdminHome() {
             </header>
 
             {/* Accesos rápidos */}
-            <section aria-labelledby="accesos-rapidos-titulo" className="grid gap-4 sm:grid-cols-2">
+            <section aria-labelledby="accesos-rapidos-titulo" className="grid gap-4 sm:grid-cols-3">
                 <h2 id="accesos-rapidos-titulo" className="sr-only">
                     Módulos principales
                 </h2>
@@ -85,7 +88,7 @@ export default function AdminHome() {
                             Ingresos de gatos
                         </h3>
                         <p className="text-sm leading-relaxed text-marino/75">
-                            Registra el origen del felino (rescatado, fundación o particular) y los datos asociados al ingreso.
+                            Registra el origen del felino (rescatado, fundación o particular) y los datos de ingreso.
                         </p>
                     </div>
                     <div className="mt-6">
@@ -107,7 +110,7 @@ export default function AdminHome() {
                             Alta de felinos
                         </h3>
                         <p className="text-sm leading-relaxed text-marino/75">
-                            Formulario para dar de alta a un gato en el sistema con su ficha técnica, fotos y estado inicial.
+                            Formulario para dar de alta a un gato en el sistema con su ficha técnica y fotos.
                         </p>
                     </div>
                     <div className="mt-6">
@@ -116,6 +119,29 @@ export default function AdminHome() {
                             className="inline-flex w-full items-center justify-center rounded-xl bg-marino px-4 py-3 text-sm font-semibold text-crema shadow-sm transition hover:bg-marino/90"
                         >
                             Dar de alta felinos
+                        </Link>
+                    </div>
+                </div>
+
+                <div className="flex flex-col justify-between rounded-2xl border border-beige/80 bg-white p-6 shadow-sm">
+                    <div className="space-y-2">
+                        <span className="inline-block rounded-lg bg-celeste/40 px-2.5 py-1 text-xs font-semibold text-marino">
+                            Sprint 3
+                        </span>
+                        <h3 className="font-heading text-xl font-bold text-marino flex items-center gap-2">
+                            <Stethoscope className="h-5 w-5 text-marino" />
+                            Historial Clínico
+                        </h3>
+                        <p className="text-sm leading-relaxed text-marino/75">
+                            Castración, pruebas VIF/ViLeF, diagnósticos y calendario de vacunas y desparasitación.
+                        </p>
+                    </div>
+                    <div className="mt-6">
+                        <Link
+                            to="/admin/clinica"
+                            className="inline-flex w-full items-center justify-center rounded-xl bg-marino px-4 py-3 text-sm font-semibold text-crema shadow-sm transition hover:bg-marino/90"
+                        >
+                            Gestión Clínica
                         </Link>
                     </div>
                 </div>
@@ -175,12 +201,33 @@ export default function AdminHome() {
                                     fotoUrl={gato.foto_url || teoFoto}
                                     historia={gato.historia}
                                     modoPublico={false}
+                                    accionesAdmin={
+                                        <button
+                                            type="button"
+                                            onClick={() => setGatoParaModal(gato)}
+                                            className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-celeste/40 py-2 text-xs font-bold text-marino transition hover:bg-celeste/70 cursor-pointer"
+                                        >
+                                            <Stethoscope className="h-3.5 w-3.5" />
+                                            <span>Expediente Clínico</span>
+                                        </button>
+                                    }
                                 />
                             </li>
                         ))}
                     </ul>
                 )}
             </section>
+
+            {/* Modal de Expediente Clínico */}
+            {gatoParaModal && (
+                <ModalExpedienteClinico
+                    gatoId={gatoParaModal.id}
+                    nombreGato={gatoParaModal.nombre}
+                    codigoFelino={gatoParaModal.codigo_felino}
+                    onClose={() => setGatoParaModal(null)}
+                    onActualizado={() => fetchFelinos()}
+                />
+            )}
         </div>
     )
 }

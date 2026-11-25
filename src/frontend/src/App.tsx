@@ -8,6 +8,7 @@ import RegistrarIngreso from './pages/admin/RegistrarIngreso'
 import RegistrarGato from './pages/admin/RegistrarGato'
 import HorariosAforo from './pages/admin/HorariosAforo'
 import GestionPostulaciones from './pages/admin/GestionPostulaciones'
+import GestionClinica from './pages/admin/GestionClinica'
 import PublicCatalog from './pages/public/PublicCatalog'
 import ReservarVisita from './pages/public/ReservarVisita'
 import PortularAdopcion from './pages/public/PostularAdopcion'
@@ -49,6 +50,7 @@ export default function App() {
                             <Route path="felinos" element={<RegistrarGato />} />
                             <Route path="horarios" element={<HorariosAforo />} />
                             <Route path="postulaciones" element={<GestionPostulaciones />} />
+                            <Route path="clinica" element={<GestionClinica />} />
                         </Route>
                     </Route>
 

@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router'
-import { CalendarClock, Home, LogOut, PlusSquare, Cat, ClipboardList } from 'lucide-react'
+import { CalendarClock, Home, LogOut, PlusSquare, Cat, ClipboardList, Stethoscope } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import teoLogo from '../assets/teo.jfif'
 
@@ -7,6 +7,7 @@ const navItems = [
     { to: '/admin', label: 'Inicio', shortLabel: 'Inicio', end: true, icon: Home },
     { to: '/admin/ingresos', label: 'Ingresos de gatos', shortLabel: 'Ingresos', end: false, icon: PlusSquare },
     { to: '/admin/felinos', label: 'Felinos', shortLabel: 'Felinos', end: false, icon: Cat },
+    { to: '/admin/clinica', label: 'Historial clínico', shortLabel: 'Clínica', end: false, icon: Stethoscope },
     { to: '/admin/horarios', label: 'Horarios de visita y aforo', shortLabel: 'Horarios', end: false, icon: CalendarClock },
     { to: '/admin/postulaciones', label: 'Postulaciones de adopción', shortLabel: 'Postulaciones', end: false, icon: ClipboardList },
 ] as const
