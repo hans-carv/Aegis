@@ -11,7 +11,9 @@ import postulacionesRoutes from './routes/postulaciones.routes';
 import documentosRoutes from './routes/documentos.routes';
 import inmunizacionesRoutes from './routes/inmunizaciones.routes';
 import historialClinicoRoutes from './routes/historialClinico.routes';
+import visitasDomiciliariasRoutes from './routes/visitasDomiciliarias.routes';
 import { publicRoutes } from './routes/public.routes';
+
 
 dotenv.config();
 
@@ -30,6 +32,7 @@ app.use('/api/postulaciones', postulacionesRoutes);
 app.use('/api/postulaciones', documentosRoutes);
 app.use('/api', inmunizacionesRoutes);
 app.use('/api', historialClinicoRoutes);
+app.use('/api', visitasDomiciliariasRoutes);
 
 
 app.use('/api/public', publicRoutes);
