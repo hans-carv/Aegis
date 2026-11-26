@@ -100,21 +100,23 @@ export class CatsService {
 
   static async listarFelinos(userRole?: string) {
     const sql = `
-      SELECT id, codigo_felino, nombre, peso, talla, edad_meses, temperamento, color_pelaje, sexo, estado, foto_url, historia, created_at
+      SELECT id, codigo_felino, nombre, peso, talla, edad_meses, temperamento, color_pelaje, sexo, estado, foto_url, historia,
+             esterilizado, resultado_vif, resultado_vilef, estado_medico, created_at
       FROM public.gatos
       ORDER BY created_at DESC
     `;
     const res = await query(sql);
 
     if (userRole !== 'ADMIN') {
-      return res.rows.map(({ foto_url, ...resto }) => resto);
+      return res.rows.map(({ foto_url, esterilizado, resultado_vif, resultado_vilef, estado_medico, ...resto }) => resto);
     }
     return res.rows;
   }
 
   static async obtenerPorIdOCodigo(identificador: string, userRole?: string) {
     const sql = `
-      SELECT id, codigo_felino, nombre, peso, talla, edad_meses, temperamento, color_pelaje, sexo, estado, foto_url, historia, created_at
+      SELECT id, codigo_felino, nombre, peso, talla, edad_meses, temperamento, color_pelaje, sexo, estado, foto_url, historia,
+             esterilizado, resultado_vif, resultado_vilef, estado_medico, created_at
       FROM public.gatos
       WHERE codigo_felino = $1 OR id::text = $1
     `;
@@ -125,7 +127,7 @@ export class CatsService {
 
     const felino = res.rows[0];
     if (userRole !== 'ADMIN') {
-      const { foto_url, ...resto } = felino;
+      const { foto_url, esterilizado, resultado_vif, resultado_vilef, estado_medico, ...resto } = felino;
       return resto;
     }
     return felino;

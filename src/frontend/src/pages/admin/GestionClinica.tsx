@@ -5,6 +5,9 @@ import ModalExpedienteClinico from '../../components/ModalExpedienteClinico';
 import {
   Stethoscope,
   Search,
+  CheckCircle2,
+  AlertCircle,
+  ShieldAlert,
   Filter,
 } from 'lucide-react';
 import teoFoto from '../../assets/teo.jfif';
@@ -37,14 +40,18 @@ export default function GestionClinica() {
 
   const felinosFiltrados = useMemo(() => {
     return felinos.filter((gato) => {
-      const matchBusqueda =
-        gato.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-        gato.codigoFelino.toLowerCase().includes(busqueda.toLowerCase());
+      const nombre = (gato.nombre || '').toLowerCase();
+      const codigo = (gato.codigoFelino || '').toLowerCase();
+      const termino = busqueda.toLowerCase().trim();
+      const matchBusqueda = !termino || nombre.includes(termino) || codigo.includes(termino);
 
       if (!matchBusqueda) return false;
 
-      // Note: `gato` might have properties or we filter by general state
       if (filtroEstadoMedico === 'TODOS') return true;
+      if (filtroEstadoMedico === 'EN_TRATAMIENTO') return gato.estadoMedico === 'EN_TRATAMIENTO';
+      if (filtroEstadoMedico === 'AISLAMIENTO') return gato.estadoMedico === 'AISLAMIENTO';
+      if (filtroEstadoMedico === 'SANO') return gato.estadoMedico === 'SANO';
+      if (filtroEstadoMedico === 'SIN_ESTERILIZAR') return !gato.esterilizado;
       if (filtroEstadoMedico === 'CUARENTENA') return gato.estado === 'CUARENTENA';
       if (filtroEstadoMedico === 'DISPONIBLE') return gato.estado === 'DISPONIBLE';
 
@@ -94,9 +101,13 @@ export default function GestionClinica() {
             onChange={(e) => setFiltroEstadoMedico(e.target.value)}
             className="rounded-xl border border-beige/80 bg-crema/20 py-2 px-3 text-xs text-marino font-medium outline-hidden"
           >
-            <option value="TODOS">Todos los estados operativos</option>
-            <option value="CUARENTENA">En Cuarentena / Tratamiento</option>
-            <option value="DISPONIBLE">Disponibles en Cafetería</option>
+            <option value="TODOS">Todos los felinos ({felinos.length})</option>
+            <option value="SANO">Estado Médico: Sanos</option>
+            <option value="EN_TRATAMIENTO">Estado Médico: En Tratamiento</option>
+            <option value="AISLAMIENTO">Estado Médico: Aislamiento</option>
+            <option value="SIN_ESTERILIZAR">Pendientes de Esterilización</option>
+            <option value="CUARENTENA">Operativo: En Cuarentena</option>
+            <option value="DISPONIBLE">Operativo: Disponibles</option>
           </select>
         </div>
       </section>
@@ -164,14 +175,44 @@ export default function GestionClinica() {
                   </div>
                 </div>
 
-                <div className="rounded-xl bg-crema/30 p-3 text-xs space-y-1 text-marino/80">
-                  <div className="flex justify-between">
-                    <span className="font-semibold text-cafe">Módulo Clínico:</span>
-                    <span className="font-bold text-marino">Expediente habilitado</span>
+                <div className="rounded-xl bg-crema/30 p-3 text-xs space-y-2 text-marino/80">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-cafe">Esterilización:</span>
+                    <span
+                      className={`inline-flex items-center gap-1 font-bold ${
+                        gato.esterilizado ? 'text-emerald-700' : 'text-amber-700'
+                      }`}
+                    >
+                      {gato.esterilizado ? (
+                        <>
+                          <CheckCircle2 className="h-3.5 w-3.5" /> Esterilizado
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle className="h-3.5 w-3.5" /> Pendiente
+                        </>
+                      )}
+                    </span>
                   </div>
-                  <p className="text-[11px] text-marino/70">
-                    Consulta castración, historial de pruebas VIF/ViLeF y calendario de vacunas.
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-cafe">Estado Médico:</span>
+                    <span
+                      className={`inline-flex items-center gap-1 font-bold ${
+                        gato.estadoMedico === 'SANO'
+                          ? 'text-emerald-700'
+                          : gato.estadoMedico === 'AISLAMIENTO'
+                          ? 'text-red-700'
+                          : 'text-amber-700'
+                      }`}
+                    >
+                      {gato.estadoMedico === 'AISLAMIENTO' && <ShieldAlert className="h-3.5 w-3.5" />}
+                      {gato.estadoMedico || 'SANO'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-marino/70">VIF: <strong>{gato.resultadoVif || 'NO_REALIZADO'}</strong></span>
+                    <span className="text-marino/70">ViLeF: <strong>{gato.resultadoVilef || 'NO_REALIZADO'}</strong></span>
+                  </div>
                 </div>
               </div>
 

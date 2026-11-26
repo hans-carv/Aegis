@@ -53,8 +53,8 @@ export default function ModalExpedienteClinico({
   const [diagnostico, setDiagnostico] = useState('');
   const [descripcionTratamiento, setDescripcionTratamiento] = useState('');
   const [esEsterilizacion, setEsEsterilizacion] = useState(true);
-  const [resultadoVif, setResultadoVif] = useState<ResultadoViral>('NEGATIVO');
-  const [resultadoVilef, setResultadoVilef] = useState<ResultadoViral>('NEGATIVO');
+  const [resultadoVif, setResultadoVif] = useState<ResultadoViral | ''>('');
+  const [resultadoVilef, setResultadoVilef] = useState<ResultadoViral | ''>('');
   const [estadoMedico, setEstadoMedico] = useState<EstadoMedico>('SANO');
   const [requiereAislamiento, setRequiereAislamiento] = useState(false);
   const [veterinarioTratamiento, setVeterinarioTratamiento] = useState('');
@@ -96,9 +96,7 @@ export default function ModalExpedienteClinico({
 
   // Actualizar checkbox de esterilización al cambiar de tipo de procedimiento
   useEffect(() => {
-    if (tipoProcedimiento === 'CASTRACION') {
-      setEsEsterilizacion(true);
-    }
+    setEsEsterilizacion(tipoProcedimiento === 'CASTRACION');
   }, [tipoProcedimiento]);
 
   async function handleGuardarTratamiento(e: React.FormEvent) {
@@ -117,10 +115,10 @@ export default function ModalExpedienteClinico({
         diagnostico: diagnostico.trim(),
         descripcionTratamiento: descripcionTratamiento.trim(),
         esEsterilizacion: tipoProcedimiento === 'CASTRACION' ? true : esEsterilizacion,
-        resultadoVif,
-        resultadoVilef,
+        ...(resultadoVif ? { resultadoVif } : {}),
+        ...(resultadoVilef ? { resultadoVilef } : {}),
         estadoMedico,
-        requiereAislamientoOCritico: requiereAislamiento,
+        requiereAislamientoOCritico: requiereAislamiento || estadoMedico !== 'SANO',
         veterinarioResponsable: veterinarioTratamiento.trim(),
       });
 
@@ -128,6 +126,10 @@ export default function ModalExpedienteClinico({
       setDiagnostico('');
       setDescripcionTratamiento('');
       setVeterinarioTratamiento('');
+      setResultadoVif('');
+      setResultadoVilef('');
+      setRequiereAislamiento(false);
+      setEstadoMedico('SANO');
       setMostrarFormTratamiento(false);
       await cargarDatos();
       onActualizado?.();
@@ -315,7 +317,7 @@ export default function ModalExpedienteClinico({
             }`}
           >
             <Syringe className="h-4 w-4" />
-            <span>Vacunas y Desparasitaciones ({inmunizaciones.length})</span>
+            <span>Carnet de Vacunación y Desparasitación ({inmunizaciones.length})</span>
           </button>
         </div>
 
@@ -434,9 +436,10 @@ export default function ModalExpedienteClinico({
                       </label>
                       <select
                         value={resultadoVif}
-                        onChange={(e) => setResultadoVif(e.target.value as ResultadoViral)}
+                        onChange={(e) => setResultadoVif(e.target.value as ResultadoViral | '')}
                         className="w-full rounded-xl border border-beige bg-white p-2 text-xs"
                       >
+                        <option value="">-- Mantener actual --</option>
                         <option value="NEGATIVO">Negativo</option>
                         <option value="POSITIVO">Positivo</option>
                         <option value="PENDIENTE">Pendiente</option>
@@ -450,9 +453,10 @@ export default function ModalExpedienteClinico({
                       </label>
                       <select
                         value={resultadoVilef}
-                        onChange={(e) => setResultadoVilef(e.target.value as ResultadoViral)}
+                        onChange={(e) => setResultadoVilef(e.target.value as ResultadoViral | '')}
                         className="w-full rounded-xl border border-beige bg-white p-2 text-xs"
                       >
+                        <option value="">-- Mantener actual --</option>
                         <option value="NEGATIVO">Negativo</option>
                         <option value="POSITIVO">Positivo</option>
                         <option value="PENDIENTE">Pendiente</option>
@@ -466,7 +470,12 @@ export default function ModalExpedienteClinico({
                       </label>
                       <select
                         value={estadoMedico}
-                        onChange={(e) => setEstadoMedico(e.target.value as EstadoMedico)}
+                        onChange={(e) => {
+                          const val = e.target.value as EstadoMedico;
+                          setEstadoMedico(val);
+                          if (val !== 'SANO') setRequiereAislamiento(true);
+                          else setRequiereAislamiento(false);
+                        }}
                         className="w-full rounded-xl border border-beige bg-white p-2 text-xs"
                       >
                         <option value="SANO">Sano (Apto sala común)</option>
@@ -491,12 +500,29 @@ export default function ModalExpedienteClinico({
                       <input
                         type="checkbox"
                         checked={requiereAislamiento}
-                        onChange={(e) => setRequiereAislamiento(e.target.checked)}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setRequiereAislamiento(checked);
+                          if (checked && estadoMedico === 'SANO') {
+                            setEstadoMedico('AISLAMIENTO');
+                          } else if (!checked && estadoMedico !== 'SANO') {
+                            setEstadoMedico('SANO');
+                          }
+                        }}
                         className="rounded text-red-600 focus:ring-red-600"
                       />
                       Requiere aislamiento médico / cuarentena estricta
                     </label>
                   </div>
+
+                  {(requiereAislamiento || estadoMedico !== 'SANO') && (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 flex items-start gap-2">
+                      <ShieldAlert className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
+                      <span>
+                        <strong>Bloqueo automático de catálogo:</strong> Al guardar este estado, el felino pasará automáticamente a <strong>CUARENTENA</strong> y se ocultará del catálogo público de adopciones.
+                      </span>
+                    </div>
+                  )}
 
                   <div className="flex justify-end pt-2">
                     <button
@@ -510,22 +536,31 @@ export default function ModalExpedienteClinico({
                 </form>
               )}
 
-              {/* Lista de Procedimientos Históricos */}
+              {/* Línea de Tiempo Clínica (SCRUM-74) */}
               {expediente?.historialClinico.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-beige p-8 text-center text-marino/60 text-xs">
                   No hay procedimientos clínicos registrados para este felino.
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="relative pl-5 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-beige/80">
                   {expediente?.historialClinico.map((item) => (
                     <article
                       key={item.id}
-                      className="rounded-2xl border border-beige/80 bg-white p-4 shadow-xs space-y-2 text-xs"
+                      className="relative rounded-2xl border border-beige/80 bg-white p-4 shadow-xs space-y-2 text-xs"
                     >
+                      <span
+                        className={`absolute -left-[17px] top-5 h-3 w-3 rounded-full ring-2 ring-white ${
+                          item.requiereAislamientoOCritico
+                            ? 'bg-red-500'
+                            : item.esEsterilizacion
+                            ? 'bg-emerald-500'
+                            : 'bg-marino'
+                        }`}
+                      />
                       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-beige/40 pb-2">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <span className="font-bold text-sm text-marino">
-                            {item.tipoProcedimiento.replace('_', ' ')}
+                            {item.tipoProcedimiento.replace(/_/g, ' ')}
                           </span>
                           {item.esEsterilizacion && (
                             <span className="rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[10px] font-bold">
@@ -534,7 +569,17 @@ export default function ModalExpedienteClinico({
                           )}
                           {item.requiereAislamientoOCritico && (
                             <span className="rounded-full bg-red-100 text-red-800 px-2 py-0.5 text-[10px] font-bold">
-                              Aislamiento
+                              Aislamiento / Cuarentena
+                            </span>
+                          )}
+                          {item.resultadoVif && (
+                            <span className="rounded-full bg-slate-100 text-slate-700 px-2 py-0.5 text-[10px] font-semibold">
+                              VIF: {item.resultadoVif}
+                            </span>
+                          )}
+                          {item.resultadoVilef && (
+                            <span className="rounded-full bg-slate-100 text-slate-700 px-2 py-0.5 text-[10px] font-semibold">
+                              ViLeF: {item.resultadoVilef}
                             </span>
                           )}
                         </div>
@@ -621,12 +666,20 @@ export default function ModalExpedienteClinico({
                       </label>
                       <input
                         type="text"
-                        placeholder="Ej. Triple Felina / Drontal / Rabia"
+                        list="sugerencias-biologicos"
+                        placeholder="Ej. Triple Felina / Rabia / Leucemia / Drontal"
                         value={nombreBiologico}
                         onChange={(e) => setNombreBiologico(e.target.value)}
                         className="w-full rounded-xl border border-beige bg-white p-2.5 text-xs text-marino focus:ring-2 focus:ring-marino outline-hidden"
                         required
                       />
+                      <datalist id="sugerencias-biologicos">
+                        <option value="Triple Felina" />
+                        <option value="Rabia" />
+                        <option value="Leucemia Felina (ViLeF)" />
+                        <option value="Drontal Gatos" />
+                        <option value="Revolution Plus" />
+                      </datalist>
                     </div>
                   </div>
 
@@ -727,6 +780,7 @@ export default function ModalExpedienteClinico({
                         <th className="p-3">Próximo Refuerzo</th>
                         <th className="p-3">Lote</th>
                         <th className="p-3">Veterinario</th>
+                        <th className="p-3">Observaciones</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-beige/40">
@@ -753,6 +807,9 @@ export default function ModalExpedienteClinico({
                           </td>
                           <td className="p-3 text-gray-500">{inm.lote || '—'}</td>
                           <td className="p-3 text-gray-600">{inm.veterinarioResponsable || '—'}</td>
+                          <td className="p-3 text-gray-500 max-w-[180px] truncate" title={inm.observaciones || ''}>
+                            {inm.observaciones || '—'}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
