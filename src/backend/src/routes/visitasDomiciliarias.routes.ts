@@ -2,6 +2,9 @@ import { Router } from 'express';
 import {
   agendarVisitaDomiciliariaController,
   listarAgendaVisitasController,
+  emitirDictamenVisitaController,
+  subirEvidenciaAdecuacionController,
+  verificarContratoPostulacionController,
 } from '../controllers/visitasDomiciliarias.controller';
 import { authenticateJWT, authorizeRole } from '../middlewares/auth.middleware';
 
@@ -19,6 +22,26 @@ router.get(
   authenticateJWT,
   authorizeRole('ADMIN'),
   listarAgendaVisitasController
+);
+
+router.patch(
+  '/admin/visitas-domiciliarias/:id/dictamen',
+  authenticateJWT,
+  authorizeRole('ADMIN'),
+  emitirDictamenVisitaController
+);
+
+router.post(
+  '/visitas-domiciliarias/:id/evidencias',
+  authenticateJWT,
+  subirEvidenciaAdecuacionController
+);
+
+router.post(
+  '/admin/postulaciones/:postulacionId/contrato',
+  authenticateJWT,
+  authorizeRole('ADMIN'),
+  verificarContratoPostulacionController
 );
 
 export default router;
