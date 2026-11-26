@@ -12,6 +12,7 @@ import documentosRoutes from './routes/documentos.routes';
 import inmunizacionesRoutes from './routes/inmunizaciones.routes';
 import historialClinicoRoutes from './routes/historialClinico.routes';
 import visitasDomiciliariasRoutes from './routes/visitasDomiciliarias.routes';
+import adopcionesFormalesRoutes from './routes/adopcionesFormales.routes';
 import { publicRoutes } from './routes/public.routes';
 
 
@@ -33,6 +34,7 @@ app.use('/api/postulaciones', documentosRoutes);
 app.use('/api', inmunizacionesRoutes);
 app.use('/api', historialClinicoRoutes);
 app.use('/api', visitasDomiciliariasRoutes);
+app.use('/api', adopcionesFormalesRoutes);
 
 
 app.use('/api/public', publicRoutes);
