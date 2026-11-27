@@ -11,7 +11,19 @@ describe('HU: Reserva de turnos y control de aforo (SCRUM-49)', () => {
   
   let franjaLimitadaId: string;
   let franjaBloqueadaId: string;
-  const fechaFuturaLunes = '2026-11-16';
+
+  // Fecha dinámica: Próximo lunes estrictamente en el futuro para evitar expiración por fechas pasadas
+  const getNextMonday = (): string => {
+    const d = new Date();
+    const day = d.getDay(); // 0: Dom, 1: Lun, ...
+    const diff = ((1 + 7 - day) % 7) || 7;
+    d.setDate(d.getDate() + diff);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const date = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${date}`;
+  };
+  const fechaFuturaLunes = getNextMonday();
 
   beforeAll(async () => {
     const usuariosExistentes = await query('SELECT id FROM public.usuarios LIMIT 2');
