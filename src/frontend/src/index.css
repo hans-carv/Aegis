@@ -26,3 +26,41 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+::selection {
+  background-color: var(--color-celeste);
+  color: var(--color-marino);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-marino);
+  outline-offset: 2px;
+}
+
+a,
+button {
+  text-underline-offset: 3px;
+}
+
+table {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Scrollbar sutil integrado con la paleta */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-crema);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-beige);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-cafe);
+}
