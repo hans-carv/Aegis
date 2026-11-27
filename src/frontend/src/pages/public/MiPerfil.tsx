@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import ModalCancelarPostulacion from '../../components/ModalCancelarPostulacion'
+import SubsanacionAdecuacionesBox from '../../components/SubsanacionAdecuacionesBox'
 import { listarMisReservas } from '../../services/reservasService'
 import { listarMisPostulaciones, cancelarPostulacion } from '../../services/postulacionesService'
 import type { EstadoReserva, ReservaUsuario } from '../../types/reserva'
@@ -56,6 +57,14 @@ const ESTILO_ESTADO_POSTULACION: Record<EstadoPostulacion, { etiqueta: string; c
     CANCELADA: {
         etiqueta: 'Cancelada',
         clases: 'bg-red-100 text-red-800 ring-red-200',
+    },
+    VISITA_PROGRAMADA: {
+        etiqueta: 'Visita domiciliaria programada',
+        clases: 'bg-celeste/45 text-marino ring-celeste',
+    },
+    PENDIENTE_ADECUACIONES: {
+        etiqueta: 'Pendiente de adecuaciones',
+        clases: 'bg-amber-100 text-cafe ring-beige',
     },
 }
 
@@ -440,6 +449,7 @@ export default function MiPerfil() {
                                                         <span className="truncate">{postulacion.direccionDomicilio}</span>
                                                     </p>
                                                 </div>
+                                                <SubsanacionAdecuacionesBox postulacionId="{postulacion.id}"/>
                                                 {postulacion.estado === 'CANCELADA' && postulacion.motivo_baja && (
                                                     <div className="mt-3 rounded-xl bg-red-50/80 p-3 text-xs text-red-900 ring-1 ring-red-200/80">
                                                         <p className="font-bold">
