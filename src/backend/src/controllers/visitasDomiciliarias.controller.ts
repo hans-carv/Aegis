@@ -41,6 +41,38 @@ export const listarAgendaVisitasController = async (req: Request, res: Response)
   }
 };
 
+export const obtenerVisitaPorPostulacionController = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const usuarioId = req.user?.id;
+    if (!usuarioId) {
+      res.status(401).json({ message: 'Usuario no autenticado.' });
+      return;
+    }
+
+    const postulacionId = Array.isArray(req.params.postulacionId)
+      ? req.params.postulacionId[0]
+      : (req.params.postulacionId as string);
+
+    const data = await VisitasDomiciliariasService.obtenerVisitaPorPostulacion(
+      postulacionId,
+      usuarioId,
+      req.user?.rol
+    );
+
+    res.status(200).json({
+      ok: true,
+      data,
+    });
+  } catch (error: any) {
+    if (error.status) {
+      res.status(error.status).json({ message: error.message });
+      return;
+    }
+    console.error('ERROR EN OBTENER VISITA POR POSTULACION:', error);
+    res.status(500).json({ message: 'Error interno al consultar la visita de la postulación.' });
+  }
+};
+
 export const emitirDictamenVisitaController = async (req: Request, res: Response): Promise<void> => {
   try {
     const visitaId = Array.isArray(req.params.id) ? req.params.id[0] : (req.params.id as string);

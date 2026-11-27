@@ -119,7 +119,7 @@ export default function SubsanacionAdecuacionesBox({
                 usuario?.email,
                 listaFinal
             )
-            setVisita(actualizada)
+            setVisita((prev) => (prev ? { ...prev, ...actualizada } : actualizada))
             setUrlsPendientes([])
             setUrlInput('')
             setExito(

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   agendarVisitaDomiciliariaController,
   listarAgendaVisitasController,
+  obtenerVisitaPorPostulacionController,
   emitirDictamenVisitaController,
   subirEvidenciaAdecuacionController,
   verificarContratoPostulacionController,
@@ -22,6 +23,12 @@ router.get(
   authenticateJWT,
   authorizeRole('ADMIN'),
   listarAgendaVisitasController
+);
+
+router.get(
+  '/visitas-domiciliarias/postulacion/:postulacionId',
+  authenticateJWT,
+  obtenerVisitaPorPostulacionController
 );
 
 router.patch(

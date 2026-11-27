@@ -449,7 +449,9 @@ export default function MiPerfil() {
                                                         <span className="truncate">{postulacion.direccionDomicilio}</span>
                                                     </p>
                                                 </div>
-                                                <SubsanacionAdecuacionesBox postulacionId="{postulacion.id}"/>
+                                                {postulacion.estado === 'PENDIENTE_ADECUACIONES' && (
+                                                    <SubsanacionAdecuacionesBox postulacionId={postulacion.id} />
+                                                )}
                                                 {postulacion.estado === 'CANCELADA' && postulacion.motivo_baja && (
                                                     <div className="mt-3 rounded-xl bg-red-50/80 p-3 text-xs text-red-900 ring-1 ring-red-200/80">
                                                         <p className="font-bold">

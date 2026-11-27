@@ -40,13 +40,16 @@ export async function listarAgendaVisitas(fecha?: string): Promise<VisitaDomicil
 }
 
 /**
- * Busca la visita asociada a una postulación dentro de la agenda
+ * Busca la visita asociada a una postulación (válido tanto para el postulante dueño como para ADMIN)
+ * GET /api/visitas-domiciliarias/postulacion/:postulacionId
  */
 export async function obtenerVisitaPorPostulacion(
     postulacionId: string
 ): Promise<VisitaDomiciliaria | null> {
-    const visitas = await listarAgendaVisitas()
-    return visitas.find((v) => v.postulacionId === postulacionId) || null
+    const res = await apiRequest<ApiEnvelope<VisitaDomiciliaria | null>>(
+        `/visitas-domiciliarias/postulacion/${postulacionId}`
+    )
+    return res.data || null
 }
 
 /**

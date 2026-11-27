@@ -190,12 +190,21 @@ export class VisitasDomiciliariasService {
       SELECT 
         v.id,
         v.postulacion_id AS "postulacionId",
+        v.evaluador_id AS "evaluadorId",
         to_char(v.fecha_visita, 'YYYY-MM-DD') AS "fechaVisita",
         to_char(v.hora_inicio, 'HH24:MI') AS "horaInicio",
         to_char(v.hora_fin, 'HH24:MI') AS "horaFin",
         v.direccion_confirmada AS "direccionConfirmada",
+        v.observaciones,
         v.estado,
+        v.dictamen,
+        v.observaciones_dictamen AS "observacionesDictamen",
+        to_char(v.fecha_limite_subsanacion, 'YYYY-MM-DD') AS "fechaLimiteSubsanacion",
+        v.fecha_dictamen AS "fechaDictamen",
+        COALESCE(v.evidencia_adecuaciones_urls, '[]'::jsonb) AS "evidenciaAdecuacionesUrls",
         u.nombre_completo AS "postulanteNombre",
+        u.email AS "postulanteEmail",
+        p.gato_id AS "gatoId",
         g.nombre AS "gatoNombre"
       FROM public.visitas_domiciliarias v
       JOIN public.postulaciones_adopcion p ON v.postulacion_id = p.id
@@ -214,6 +223,52 @@ export class VisitasDomiciliariasService {
 
     const res = await query(sql, params);
     return res.rows;
+  }
+
+  static async obtenerVisitaPorPostulacion(postulacionId: string, usuarioId: string, rol?: string) {
+    const res = await query(
+      `SELECT 
+        v.id,
+        v.postulacion_id AS "postulacionId",
+        v.evaluador_id AS "evaluadorId",
+        to_char(v.fecha_visita, 'YYYY-MM-DD') AS "fechaVisita",
+        to_char(v.hora_inicio, 'HH24:MI') AS "horaInicio",
+        to_char(v.hora_fin, 'HH24:MI') AS "horaFin",
+        v.direccion_confirmada AS "direccionConfirmada",
+        v.observaciones,
+        v.estado,
+        v.dictamen,
+        v.observaciones_dictamen AS "observacionesDictamen",
+        to_char(v.fecha_limite_subsanacion, 'YYYY-MM-DD') AS "fechaLimiteSubsanacion",
+        v.fecha_dictamen AS "fechaDictamen",
+        COALESCE(v.evidencia_adecuaciones_urls, '[]'::jsonb) AS "evidenciaAdecuacionesUrls",
+        p.usuario_id AS "postulanteUsuarioId",
+        u.nombre_completo AS "postulanteNombre",
+        u.email AS "postulanteEmail",
+        p.gato_id AS "gatoId",
+        g.nombre AS "gatoNombre"
+      FROM public.visitas_domiciliarias v
+      JOIN public.postulaciones_adopcion p ON v.postulacion_id = p.id
+      JOIN public.usuarios u ON p.usuario_id = u.id
+      JOIN public.gatos g ON p.gato_id = g.id
+      WHERE v.postulacion_id = $1
+      ORDER BY v.created_at DESC
+      LIMIT 1`,
+      [postulacionId]
+    );
+
+    if (res.rows.length === 0) {
+      return null;
+    }
+
+    const visita = res.rows[0];
+    const esAdmin = String(rol || '').toUpperCase() === 'ADMIN';
+    if (!esAdmin && visita.postulanteUsuarioId !== usuarioId) {
+      throw { status: 403, message: 'No tienes permiso para consultar la visita de esta postulación.' };
+    }
+
+    const { postulanteUsuarioId: _, ...visitaPublica } = visita;
+    return visitaPublica;
   }
 
   static async emitirDictamen(visitaId: string, dto: EmitirDictamenDto) {
