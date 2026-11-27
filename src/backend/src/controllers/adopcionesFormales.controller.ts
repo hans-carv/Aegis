@@ -44,3 +44,16 @@ export const obtenerFichaAdminGatoController = async (req: Request, res: Respons
     res.status(500).json({ message: 'Error interno al consultar la ficha administrativa del felino.' });
   }
 };
+
+export const listarAdopcionesController = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const data = await AdopcionesFormalesService.listarAdopcionesFormales();
+    res.status(200).json({
+      ok: true,
+      data,
+    });
+  } catch (error: any) {
+    console.error('ERROR EN LISTAR ADOPCIONES FORMALES:', error);
+    res.status(500).json({ message: 'Error interno al consultar el directorio de adoptantes.' });
+  }
+};

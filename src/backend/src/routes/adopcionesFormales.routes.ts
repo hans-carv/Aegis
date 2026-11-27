@@ -3,6 +3,7 @@ import multer from 'multer';
 import {
   vincularAdopcionController,
   obtenerFichaAdminGatoController,
+  listarAdopcionesController,
 } from '../controllers/adopcionesFormales.controller';
 import {
   descargarContratoPdfController,
@@ -15,6 +16,13 @@ const uploadContrato = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
 });
+
+router.get(
+  '/admin/adopciones',
+  authenticateJWT,
+  authorizeRole('ADMIN'),
+  listarAdopcionesController
+);
 
 router.post(
   '/admin/adopciones/vincular',

@@ -181,13 +181,15 @@ export class ContratoAdopcionService {
     contratoUrlManual?: string
   ) {
     const checkRes = await query(
-      'SELECT id, estado_vinculo FROM public.adopciones_formales WHERE id = $1',
+      'SELECT id, estado_vinculo FROM public.adopciones_formales WHERE id = $1 OR postulacion_id = $1 LIMIT 1',
       [adopcionId]
     );
 
     if (checkRes.rows.length === 0) {
       throw { status: 404, message: 'Registro de adopción formal no encontrado.' };
     }
+
+    const realAdopcionId = checkRes.rows[0].id;
 
     let rutaAlmacenada: string | null = null;
 
@@ -215,7 +217,7 @@ export class ContratoAdopcionService {
          gato_id AS "gatoId",
          contrato_generado_at AS "contratoGeneradoAt",
          contrato_firmado_url AS "contratoFirmadoUrl"`,
-      [rutaAlmacenada, adopcionId]
+      [rutaAlmacenada, realAdopcionId]
     );
 
     return updateRes.rows[0];

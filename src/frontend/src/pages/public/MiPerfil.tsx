@@ -46,6 +46,10 @@ const ESTILO_ESTADO_POSTULACION: Record<EstadoPostulacion, { etiqueta: string; c
         etiqueta: 'Aprobada',
         clases: 'bg-green-100 text-green-800 ring-green-300',
     },
+    APROBADA_FINALIZADA: {
+        etiqueta: 'Adopción aprobada y finalizada',
+        clases: 'bg-emerald-100 text-emerald-800 ring-emerald-300',
+    },
     RECHAZADA: {
         etiqueta: 'Rechazada',
         clases: 'bg-red-100 text-red-800 ring-red-200',

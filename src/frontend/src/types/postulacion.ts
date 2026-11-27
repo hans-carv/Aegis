@@ -27,6 +27,7 @@ export type EstadoPostulacion =
     | 'VISITA_PROGRAMADA'
     | 'PENDIENTE_ADECUACIONES'
     | 'APROBADA'
+    | 'APROBADA_FINALIZADA'
     | 'FINALIZADA'
     | 'CANCELADA'
     | 'RECHAZADA'
@@ -53,9 +54,18 @@ export interface EstadoDocumentoAdmin {
     nombreArchivo: string
 }
 
+export interface AdopcionFormalResumen {
+    id: string
+    fechaAdopcion: string
+    contratoGeneradoAt?: string | null
+    contratoFirmadoUrl?: string | null
+}
+
 export interface PostulacionAdmin extends PostulacionRegistrada {
     postulanteNombre: string
     postulanteEmail: string
     felinoNombre: string
+    codigoFelino?: string
+    adopcionFormal?: AdopcionFormalResumen | null
     documentos: EstadoDocumentoAdmin[]
 }

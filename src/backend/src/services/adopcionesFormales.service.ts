@@ -156,6 +156,7 @@ export class AdopcionesFormalesService {
          g.nombre,
          g.codigo_felino AS "codigoFelino",
          g.estado,
+         g.foto_url AS "fotoUrl",
          g.esterilizado,
          g.resultado_vif AS "resultadoVif",
          g.resultado_vilef AS "resultadoVilef",
@@ -178,9 +179,12 @@ export class AdopcionesFormalesService {
          af.direccion_tenencia AS "direccionTenencia",
          af.telefono_tenencia AS "telefonoTenencia",
          af.observaciones_entrega AS "observacionesEntrega",
+         af.contrato_generado_at AS "contratoGeneradoAt",
+         af.contrato_firmado_url AS "contratoFirmadoUrl",
          u.id AS "adoptanteId",
          u.nombre_completo AS "nombreCompleto",
-         u.email
+         u.email,
+         u.ci
        FROM public.adopciones_formales af
        JOIN public.usuarios u ON af.adoptante_id = u.id
        WHERE af.gato_id = $1 AND af.estado_vinculo = 'VIGENTE'
@@ -192,5 +196,34 @@ export class AdopcionesFormalesService {
       felino: gatoRes.rows[0],
       propietarioAdoptanteActual: adoptanteRes.rows[0] || null,
     };
+  }
+
+  static async listarAdopcionesFormales() {
+    const res = await query(
+      `SELECT 
+         af.id AS "adopcionId",
+         af.postulacion_id AS "postulacionId",
+         af.gato_id AS "gatoId",
+         af.adoptante_id AS "adoptanteId",
+         af.estado_vinculo AS "estadoVinculo",
+         af.fecha_adopcion AS "fechaAdopcion",
+         af.direccion_tenencia AS "direccionTenencia",
+         af.telefono_tenencia AS "telefonoTenencia",
+         af.observaciones_entrega AS "observacionesEntrega",
+         af.contrato_generado_at AS "contratoGeneradoAt",
+         af.contrato_firmado_url AS "contratoFirmadoUrl",
+         u.nombre_completo AS "nombreCompleto",
+         u.email,
+         u.ci,
+         g.nombre AS "gatoNombre",
+         g.codigo_felino AS "codigoFelino",
+         g.estado AS "gatoEstado",
+         g.foto_url AS "gatoFotoUrl"
+       FROM public.adopciones_formales af
+       JOIN public.usuarios u ON af.adoptante_id = u.id
+       JOIN public.gatos g ON af.gato_id = g.id
+       ORDER BY af.fecha_adopcion DESC`
+    );
+    return res.rows;
   }
 }

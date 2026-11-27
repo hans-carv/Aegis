@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import {
-    ArrowLeft, Calendar, CalendarCheck, CheckCircle2, ClipboardList, Eye, FileCheck2, FileWarning, Filter,Home, Lock,
-    Mail, MapPin, Phone, Search, ShieldCheck, User, Wallet, XCircle, Ban,
+    AlertCircle, ArrowLeft, Award, Calendar, CalendarCheck, CheckCircle2, ClipboardList, Download, Eye, FileCheck2, FileText, FileWarning, Filter, Home, Lock,
+    Mail, MapPin, Phone, Search, ShieldCheck, Upload, User, Wallet, XCircle, Ban,
     ClipboardCheck, Clock, ExternalLink, Wrench, Image as ImageIcon
 } from 'lucide-react'
 import VisorDocSeguroModal from '../../components/VisorDocSeguroModal'
@@ -14,6 +14,11 @@ import {
     obtenerVisitaPorPostulacion,
     validarHabilitadoParaContrato,
 } from '../../services/visitasDomiciliariasService'
+import {
+    descargarContratoPdf,
+    subirContratoFirmado,
+    vincularAdopcionFormal,
+} from '../../services/adopcionesService'
 import type { EstadoPostulacion, NombreCampoDocumento, PostulacionAdmin } from '../../types/postulacion'
 import type { VisitaDomiciliaria } from '../../types/visitaDomiciliaria'
 
@@ -29,6 +34,10 @@ const BADGE_ESTADO: Record<EstadoPostulacion, { etiqueta: string; clases: string
     APROBADA: {
         etiqueta: 'Aprobada',
         clases: 'bg-green-100 text-green-800 ring-green-300',
+    },
+    APROBADA_FINALIZADA: {
+        etiqueta: 'Adopción formalizada',
+        clases: 'bg-emerald-100 text-emerald-800 ring-emerald-300',
     },
     RECHAZADA: {
         etiqueta: 'Rechazada',
@@ -193,6 +202,159 @@ export default function GestionPostulaciones() {
     const [visitaParaDictamen, setVisitaParaDictamen] = useState<VisitaDomiciliaria | null>(null)
     const [alertaAdmin, setAlertaAdmin] = useState<string | null>(null)
 
+    // Formalización de adopción y contrato PDF (SCRUM-89 y SCRUM-94)
+    const [observacionesEntrega, setObservacionesEntrega] = useState('')
+    const [vinculandoAdopcion, setVinculandoAdopcion] = useState(false)
+    const [descargandoContrato, setDescargandoContrato] = useState(false)
+    const [archivoContratoFirmado, setArchivoContratoFirmado] = useState<File | null>(null)
+    const [urlContratoFirmadoManual, setUrlContratoFirmadoManual] = useState('')
+    const [subiendoContrato, setSubiendoContrato] = useState(false)
+    const [errorAdopcionContrato, setErrorAdopcionContrato] = useState<string | null>(null)
+
+    useEffect(() => {
+        setObservacionesEntrega('')
+        setArchivoContratoFirmado(null)
+        setUrlContratoFirmadoManual('')
+        setErrorAdopcionContrato(null)
+    }, [expedienteSeleccionado?.id])
+
+    async function manejarConfirmarAdopcionDefinitiva() {
+        if (!expedienteSeleccionado) return
+        setErrorAdopcionContrato(null)
+        setVinculandoAdopcion(true)
+
+        try {
+            const res = await vincularAdopcionFormal({
+                postulacionId: expedienteSeleccionado.id,
+                observacionesEntrega: observacionesEntrega.trim() || undefined,
+            })
+
+            const actualizada: PostulacionAdmin = {
+                ...expedienteSeleccionado,
+                estado: 'APROBADA_FINALIZADA',
+                adopcionFormal: {
+                    id: res.adopcionFormal.id,
+                    fechaAdopcion: res.adopcionFormal.fechaAdopcion,
+                    contratoGeneradoAt: null,
+                    contratoFirmadoUrl: null,
+                },
+            }
+
+            setExpedienteSeleccionado(actualizada)
+            setPostulaciones((prev) =>
+                prev.map((p) => (p.id === actualizada.id ? actualizada : p))
+            )
+            setObservacionesEntrega('')
+            setAlertaAdmin(
+                `Adopción formalizada con éxito: ${actualizada.postulanteNombre} es ahora el propietario legal de ${actualizada.felinoNombre} (estado: ADOPTADO).`
+            )
+        } catch (err) {
+            setErrorAdopcionContrato(
+                err instanceof Error
+                    ? err.message
+                    : 'No se pudo consolidar la adopción definitiva.'
+            )
+        } finally {
+            setVinculandoAdopcion(false)
+        }
+    }
+
+    async function manejarDescargarContratoExpediente() {
+        if (!expedienteSeleccionado) return
+        setErrorAdopcionContrato(null)
+        setDescargandoContrato(true)
+
+        try {
+            const idObjetivo =
+                expedienteSeleccionado.adopcionFormal?.id || expedienteSeleccionado.id
+            const { blobUrl, filename } = await descargarContratoPdf(idObjetivo)
+
+            const link = document.createElement('a')
+            link.href = blobUrl
+            link.download = filename
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            window.open(blobUrl, '_blank', 'noopener,noreferrer')
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000)
+
+            if (expedienteSeleccionado.adopcionFormal) {
+                const actualizada: PostulacionAdmin = {
+                    ...expedienteSeleccionado,
+                    adopcionFormal: {
+                        ...expedienteSeleccionado.adopcionFormal,
+                        contratoGeneradoAt: new Date().toISOString(),
+                    },
+                }
+                setExpedienteSeleccionado(actualizada)
+                setPostulaciones((prev) =>
+                    prev.map((p) => (p.id === actualizada.id ? actualizada : p))
+                )
+            }
+
+            setAlertaAdmin(`Contrato PDF generado correctamente (${filename}).`)
+        } catch (err) {
+            setErrorAdopcionContrato(
+                err instanceof Error ? err.message : 'No se pudo generar el contrato PDF.'
+            )
+        } finally {
+            setDescargandoContrato(false)
+        }
+    }
+
+    function manejarSeleccionArchivoContrato(e: ChangeEvent<HTMLInputElement>) {
+        setArchivoContratoFirmado(e.target.files?.[0] || null)
+        setErrorAdopcionContrato(null)
+    }
+
+    async function manejarSubirContratoFirmadoExpediente(e: FormEvent) {
+        e.preventDefault()
+        if (!expedienteSeleccionado?.adopcionFormal) return
+        setErrorAdopcionContrato(null)
+
+        if (!archivoContratoFirmado && !urlContratoFirmadoManual.trim()) {
+            setErrorAdopcionContrato(
+                'Adjunta el archivo PDF/imagen del contrato firmado o ingresa su enlace.'
+            )
+            return
+        }
+
+        setSubiendoContrato(true)
+        try {
+            const res = await subirContratoFirmado(expedienteSeleccionado.adopcionFormal.id, {
+                ...(archivoContratoFirmado ? { archivo: archivoContratoFirmado } : {}),
+                ...(urlContratoFirmadoManual.trim()
+                    ? { contratoFirmadoUrl: urlContratoFirmadoManual.trim() }
+                    : {}),
+            })
+
+            const actualizada: PostulacionAdmin = {
+                ...expedienteSeleccionado,
+                adopcionFormal: {
+                    ...expedienteSeleccionado.adopcionFormal,
+                    contratoFirmadoUrl: res.contratoFirmadoUrl,
+                    contratoGeneradoAt:
+                        res.contratoGeneradoAt ||
+                        expedienteSeleccionado.adopcionFormal.contratoGeneradoAt,
+                },
+            }
+
+            setExpedienteSeleccionado(actualizada)
+            setPostulaciones((prev) =>
+                prev.map((p) => (p.id === actualizada.id ? actualizada : p))
+            )
+            setArchivoContratoFirmado(null)
+            setUrlContratoFirmadoManual('')
+            setAlertaAdmin('Contrato firmado almacenado correctamente en el expediente.')
+        } catch (err) {
+            setErrorAdopcionContrato(
+                err instanceof Error ? err.message : 'Error al subir el contrato firmado.'
+            )
+        } finally {
+            setSubiendoContrato(false)
+        }
+    }
+
     async function confirmarBajaAdmin(motivoBaja: string) {
         if (!expedienteSeleccionado) return
 
@@ -297,7 +459,8 @@ export default function GestionPostulaciones() {
             expedienteSeleccionado.documentacion_completa &&
             expedienteSeleccionado.estado !== 'CANCELADA' &&
             expedienteSeleccionado.estado !== 'RECHAZADA' &&
-            expedienteSeleccionado.estado !== 'FINALIZADA'
+            expedienteSeleccionado.estado !== 'FINALIZADA' &&
+            expedienteSeleccionado.estado !== 'APROBADA_FINALIZADA'
 
         return (
             <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
@@ -727,6 +890,199 @@ export default function GestionPostulaciones() {
                                 <Lock className="h-4 w-4 shrink-0 text-cafe" />
                             )}
                             <span>{estadoContratoInfo.mensaje}</span>
+                        </div>
+                    )}
+                </section>
+
+                {/* SECCIÓN 5: Formalización de Adopción y Contrato Legal PDF (SCRUM-89 y SCRUM-94) */}
+                <section
+                    aria-labelledby="sec-adopcion-contrato"
+                    className="rounded-2xl bg-white p-6 shadow-[0_10px_30px_rgba(23,38,65,0.05)] ring-1 ring-beige/70 space-y-4"
+                >
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-beige/50 pb-3">
+                        <div className="flex items-center gap-2.5">
+                            <Award className="h-5 w-5 text-cafe" />
+                            <h2 id="sec-adopcion-contrato" className="font-heading text-lg font-bold text-marino">
+                                5. Formalización de adopción y contrato legal PDF
+                            </h2>
+                        </div>
+                        {expedienteSeleccionado.adopcionFormal && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800 ring-1 ring-emerald-300">
+                                <ShieldCheck className="h-3.5 w-3.5" />
+                                Vínculo legal vigente
+                            </span>
+                        )}
+                    </div>
+
+                    {!expedienteSeleccionado.adopcionFormal ? (
+                        <div className="space-y-3 rounded-2xl bg-crema/45 p-4 ring-1 ring-beige/70">
+                            {estadoContratoInfo?.habilitado &&
+                            expedienteSeleccionado.estado === 'APROBADA' ? (
+                                <>
+                                    <p className="text-xs text-marino/85">
+                                        La visita domiciliaria fue <strong>APROBADA</strong>. Confirma la
+                                        adopción definitiva para vincular a{' '}
+                                        <strong>{expedienteSeleccionado.postulanteNombre}</strong> como
+                                        propietario legal de{' '}
+                                        <strong>{expedienteSeleccionado.felinoNombre}</strong>, cambiar
+                                        el estado del felino a <strong>ADOPTADO</strong> y habilitar el
+                                        contrato legal en PDF.
+                                    </p>
+
+                                    <div>
+                                        <label
+                                            htmlFor="observacionesEntrega"
+                                            className="block text-xs font-bold text-marino mb-1"
+                                        >
+                                            Observaciones de entrega{' '}
+                                            <span className="font-normal text-marino/60">(opcional)</span>
+                                        </label>
+                                        <input
+                                            id="observacionesEntrega"
+                                            type="text"
+                                            value={observacionesEntrega}
+                                            onChange={(e) => setObservacionesEntrega(e.target.value)}
+                                            placeholder="Ej. Entregado con carnet de vacunación y transportadora..."
+                                            className="h-10 w-full rounded-xl border border-beige bg-white px-3 text-xs text-marino outline-none focus:border-marino focus:ring-2 focus:ring-celeste"
+                                        />
+                                    </div>
+
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <button
+                                            type="button"
+                                            disabled={vinculandoAdopcion}
+                                            onClick={manejarConfirmarAdopcionDefinitiva}
+                                            className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:opacity-60 cursor-pointer"
+                                        >
+                                            <Award className="h-4 w-4" />
+                                            <span>
+                                                {vinculandoAdopcion
+                                                    ? 'Confirmando adopción...'
+                                                    : 'Confirmar Adopción Definitiva'}
+                                            </span>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            disabled={descargandoContrato}
+                                            onClick={manejarDescargarContratoExpediente}
+                                            className="inline-flex items-center gap-2 rounded-xl border border-beige bg-white px-4 py-2.5 text-xs font-semibold text-marino transition hover:bg-crema disabled:opacity-60 cursor-pointer"
+                                        >
+                                            <Download className="h-4 w-4" />
+                                            <span>Generar / Descargar Contrato PDF</span>
+                                        </button>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <p className="text-xs text-marino/75">
+                                        La formalización definitiva y emisión de contrato PDF se habilitan
+                                        únicamente cuando la postulación tenga visita domiciliaria{' '}
+                                        <strong>APROBADA</strong>.
+                                    </p>
+                                    <button
+                                        type="button"
+                                        disabled={descargandoContrato}
+                                        onClick={manejarDescargarContratoExpediente}
+                                        className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-beige bg-white px-4 py-2 text-xs font-semibold text-marino/75 transition hover:bg-crema cursor-pointer"
+                                    >
+                                        <FileText className="h-4 w-4" />
+                                        <span>Generar / Descargar Contrato PDF</span>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="space-y-4 rounded-2xl border border-emerald-200 bg-emerald-50/35 p-4">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="space-y-0.5">
+                                    <p className="text-xs font-bold uppercase tracking-wider text-emerald-800">
+                                        Propietario / Adoptante Legal Actual
+                                    </p>
+                                    <p className="text-sm font-bold text-marino">
+                                        {expedienteSeleccionado.postulanteNombre} (
+                                        {expedienteSeleccionado.postulanteEmail})
+                                    </p>
+                                    <p className="text-xs text-marino/70">
+                                        Adopción consolidada el{' '}
+                                        {formatearFecha(expedienteSeleccionado.adopcionFormal.fechaAdopcion)}
+                                        {expedienteSeleccionado.adopcionFormal.contratoGeneradoAt
+                                            ? ` · Última emisión PDF: ${formatearFecha(expedienteSeleccionado.adopcionFormal.contratoGeneradoAt)}`
+                                            : ''}
+                                    </p>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    disabled={descargandoContrato}
+                                    onClick={manejarDescargarContratoExpediente}
+                                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-marino px-4 py-2.5 text-xs font-semibold text-crema shadow-sm transition hover:bg-marino/90 disabled:opacity-60 cursor-pointer"
+                                >
+                                    <Download className="h-4 w-4" />
+                                    <span>
+                                        {descargandoContrato
+                                            ? 'Generando PDF...'
+                                            : 'Generar / Descargar Contrato PDF'}
+                                    </span>
+                                </button>
+                            </div>
+
+                            {expedienteSeleccionado.adopcionFormal.contratoFirmadoUrl && (
+                                <div className="flex items-center gap-2 rounded-xl bg-emerald-100/70 p-3 text-xs font-semibold text-emerald-900 ring-1 ring-emerald-300">
+                                    <FileCheck2 className="h-4 w-4 shrink-0 text-emerald-700" />
+                                    <span className="truncate">
+                                        Contrato firmado resguardado:{' '}
+                                        {expedienteSeleccionado.adopcionFormal.contratoFirmadoUrl}
+                                    </span>
+                                </div>
+                            )}
+
+                            <form
+                                onSubmit={manejarSubirContratoFirmadoExpediente}
+                                className="flex flex-col gap-2.5 border-t border-emerald-200/70 pt-3 sm:flex-row sm:items-center"
+                            >
+                                <label className="flex flex-1 cursor-pointer items-center gap-2 rounded-xl border border-dashed border-beige bg-white px-3 py-2 text-xs text-marino/80 hover:border-marino">
+                                    <Upload className="h-4 w-4 shrink-0 text-cafe" />
+                                    <span className="truncate">
+                                        {archivoContratoFirmado
+                                            ? archivoContratoFirmado.name
+                                            : 'Adjuntar copia firmada (PDF o imagen escaneada)'}
+                                    </span>
+                                    <input
+                                        type="file"
+                                        accept=".pdf,image/png,image/jpeg,image/webp"
+                                        onChange={manejarSeleccionArchivoContrato}
+                                        className="sr-only"
+                                    />
+                                </label>
+
+                                <input
+                                    type="text"
+                                    value={urlContratoFirmadoManual}
+                                    onChange={(e) => setUrlContratoFirmadoManual(e.target.value)}
+                                    placeholder="o URL del documento firmado..."
+                                    className="h-9 rounded-xl border border-beige bg-white px-3 text-xs text-marino outline-none focus:border-marino focus:ring-2 focus:ring-celeste sm:w-56"
+                                />
+
+                                <button
+                                    type="submit"
+                                    disabled={subiendoContrato}
+                                    className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-cafe px-4 text-xs font-semibold text-crema transition hover:bg-cafe/90 disabled:opacity-60 cursor-pointer"
+                                >
+                                    <Upload className="h-3.5 w-3.5" />
+                                    <span>{subiendoContrato ? 'Subiendo...' : 'Subir firmado'}</span>
+                                </button>
+                            </form>
+                        </div>
+                    )}
+
+                    {errorAdopcionContrato && (
+                        <div
+                            role="alert"
+                            className="flex items-center gap-2 rounded-xl bg-red-50 p-3 text-xs font-medium text-red-800 ring-1 ring-red-200"
+                        >
+                            <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
+                            <span>{errorAdopcionContrato}</span>
                         </div>
                     )}
                 </section>

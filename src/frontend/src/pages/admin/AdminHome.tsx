@@ -2,9 +2,10 @@ import { Link } from 'react-router'
 import { useEffect, useState } from 'react'
 import GatoCard, { type EstadoGato, type SexoGato } from '../../components/GatoCard'
 import ModalExpedienteClinico from '../../components/ModalExpedienteClinico'
+import ModalFichaAdminGato from '../../components/ModalFichaAdminGato'
 import teoFoto from '../../assets/teo.jfif'
 import { useAuth } from '../../hooks/useAuth'
-import { Stethoscope } from 'lucide-react'
+import { Award, Stethoscope } from 'lucide-react'
 
 const API_URL = import.meta.env.VITE_API_URL || '/api'
 
@@ -30,6 +31,7 @@ export default function AdminHome() {
     const [cargando, setCargando] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [gatoParaModal, setGatoParaModal] = useState<GatoBackend | null>(null)
+    const [gatoParaFicha, setGatoParaFicha] = useState<GatoBackend | null>(null)
 
     async function fetchFelinos() {
         setCargando(true)
@@ -202,14 +204,24 @@ export default function AdminHome() {
                                     historia={gato.historia}
                                     modoPublico={false}
                                     accionesAdmin={
-                                        <button
-                                            type="button"
-                                            onClick={() => setGatoParaModal(gato)}
-                                            className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-celeste/40 py-2 text-xs font-bold text-marino transition hover:bg-celeste/70 cursor-pointer"
-                                        >
-                                            <Stethoscope className="h-3.5 w-3.5" />
-                                            <span>Expediente Clínico</span>
-                                        </button>
+                                        <div className="grid grid-cols-2 gap-2 w-full">
+                                            <button
+                                                type="button"
+                                                onClick={() => setGatoParaModal(gato)}
+                                                className="flex items-center justify-center gap-1.5 rounded-xl bg-celeste/40 py-2 px-2 text-xs font-bold text-marino transition hover:bg-celeste/70 cursor-pointer"
+                                            >
+                                                <Stethoscope className="h-3.5 w-3.5 shrink-0" />
+                                                <span className="truncate">Clínico</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setGatoParaFicha(gato)}
+                                                className="flex items-center justify-center gap-1.5 rounded-xl bg-marino/10 py-2 px-2 text-xs font-bold text-marino transition hover:bg-marino/20 cursor-pointer"
+                                            >
+                                                <Award className="h-3.5 w-3.5 shrink-0" />
+                                                <span className="truncate">Propietario</span>
+                                            </button>
+                                        </div>
                                     }
                                 />
                             </li>
@@ -226,6 +238,16 @@ export default function AdminHome() {
                     codigoFelino={gatoParaModal.codigo_felino}
                     onClose={() => setGatoParaModal(null)}
                     onActualizado={() => fetchFelinos()}
+                />
+            )}
+
+            {/* Modal Ficha Administrativa y Propietario Legal Actual (SCRUM-89) */}
+            {gatoParaFicha && (
+                <ModalFichaAdminGato
+                    gatoId={gatoParaFicha.id}
+                    nombreGato={gatoParaFicha.nombre}
+                    codigoFelino={gatoParaFicha.codigo_felino}
+                    onCerrar={() => setGatoParaFicha(null)}
                 />
             )}
         </div>

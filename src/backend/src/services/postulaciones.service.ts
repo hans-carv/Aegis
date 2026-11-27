@@ -127,6 +127,10 @@ export class PostulacionesService {
         g.nombre AS "gatoNombre",
         g.codigo_felino AS "codigoFelino",
         g.id AS "gatoId",
+        af.id AS "adopcionId",
+        af.fecha_adopcion AS "fechaAdopcion",
+        af.contrato_generado_at AS "contratoGeneradoAt",
+        af.contrato_firmado_url AS "contratoFirmadoUrl",
         COALESCE(
           (
             SELECT json_agg(json_build_object(
@@ -155,6 +159,7 @@ export class PostulacionesService {
       FROM public.postulaciones_adopcion p
       JOIN public.usuarios u ON p.usuario_id = u.id
       JOIN public.gatos g ON p.gato_id = g.id
+      LEFT JOIN public.adopciones_formales af ON af.postulacion_id = p.id
       WHERE 1=1
     `;
     const params: any[] = [];
@@ -189,6 +194,14 @@ export class PostulacionesService {
         motivo_baja: row.motivoBaja || undefined,
         cancelada_por: row.canceladoPor || undefined,
         fecha_baja: row.fechaBaja || undefined,
+        adopcionFormal: row.adopcionId
+          ? {
+              id: row.adopcionId,
+              fechaAdopcion: row.fechaAdopcion,
+              contratoGeneradoAt: row.contratoGeneradoAt || null,
+              contratoFirmadoUrl: row.contratoFirmadoUrl || null,
+            }
+          : null,
         documentos: Array.isArray(row.documentos) && row.documentos.length > 0
           ? row.documentos
           : [
