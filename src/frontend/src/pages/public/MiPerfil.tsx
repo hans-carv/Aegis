@@ -415,7 +415,7 @@ export default function MiPerfil() {
                                         <article
                                             key={postulacion.id}
                                             className={`flex flex-col justify-between rounded-2xl p-5 shadow-[0_10px_30px_rgba(23,38,65,0.05)] ring-1 ${
-                                                postulacion.estado === 'CANCELADA'
+                                                postulacion.estado === 'CANCELADA' || postulacion.estado === 'RECHAZADA'
                                                     ? 'bg-white/70 ring-red-200/80'
                                                     : 'bg-white ring-beige/70'
                                             }`}                                        >
@@ -466,6 +466,22 @@ export default function MiPerfil() {
                                                         <p className="mt-1 text-[11px] text-red-700/80">
                                                             Fecha de baja: {postulacion.fecha_baja}
                                                         </p>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                {postulacion.estado === 'RECHAZADA' && (
+                                                    <div className="mt-3 rounded-xl bg-red-50/80 p-3 text-xs text-red-900 ring-1 ring-red-200/80">
+                                                        <p className="font-bold">
+                                                            Motivo de rechazo (Administración):
+                                                        </p>
+                                                        <p className="mt-0.5">
+                                                            {postulacion.observaciones_dictamen ||
+                                                                'La solicitud no cumplió con los criterios de evaluación domiciliaria.'}
+                                                        </p>
+                                                        {postulacion.fecha_dictamen && (
+                                                            <p className="mt-1 text-[11px] text-red-700/80">
+                                                                Fecha de dictamen: {postulacion.fecha_dictamen}
+                                                            </p>
                                                         )}
                                                     </div>
                                                 )}

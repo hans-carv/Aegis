@@ -44,6 +44,8 @@ export interface PostulacionRegistrada extends CrearPostulacionPayload {
     motivo_baja?: string
     cancelada_por?: 'POSTULANTE' | 'ADMIN'
     fecha_baja?: string
+    observaciones_dictamen?: string
+    fecha_dictamen?: string
 }
 
 export interface EstadoDocumentoAdmin {

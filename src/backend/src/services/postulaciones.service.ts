@@ -231,7 +231,21 @@ export class PostulacionesService {
         u.email AS "postulanteEmail",
         g.nombre AS "gatoNombre",
         g.codigo_felino AS "codigoFelino",
-        g.id AS "gatoId"
+        g.id AS "gatoId",
+        (
+          SELECT v.observaciones_dictamen
+          FROM public.visitas_domiciliarias v
+          WHERE v.postulacion_id = p.id
+          ORDER BY v.fecha_dictamen DESC NULLS LAST, v.created_at DESC
+          LIMIT 1
+        ) AS "observacionesDictamen",
+        (
+          SELECT v.fecha_dictamen
+          FROM public.visitas_domiciliarias v
+          WHERE v.postulacion_id = p.id
+          ORDER BY v.fecha_dictamen DESC NULLS LAST, v.created_at DESC
+          LIMIT 1
+        ) AS "fechaDictamen"
       FROM public.postulaciones_adopcion p
       JOIN public.usuarios u ON p.usuario_id = u.id
       JOIN public.gatos g ON p.gato_id = g.id
@@ -255,6 +269,8 @@ export class PostulacionesService {
         motivo_baja: row.motivoBaja || undefined,
         cancelada_por: row.canceladoPor || undefined,
         fecha_baja: row.fechaBaja || undefined,
+        observaciones_dictamen: row.observacionesDictamen || undefined,
+        fecha_dictamen: row.fechaDictamen || undefined,
       };
     });
   }
