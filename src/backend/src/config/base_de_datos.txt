@@ -204,3 +204,44 @@ CREATE TABLE IF NOT EXISTS public.controles_inmunologicos (
 );
 
 CREATE INDEX IF NOT EXISTS idx_controles_inmunologicos_gato_id ON public.controles_inmunologicos(gato_id);
+
+-- 13. Sprint 3 (SCRUM-77 / SCRUM-82): Tabla visitas_domiciliarias
+ALTER TABLE public.postulaciones_adopcion ADD COLUMN IF NOT EXISTS documentacion_completa BOOLEAN DEFAULT FALSE;
+
+CREATE TABLE IF NOT EXISTS public.visitas_domiciliarias (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    postulacion_id UUID NOT NULL REFERENCES public.postulaciones_adopcion(id) ON DELETE CASCADE,
+    evaluador_id UUID NOT NULL REFERENCES public.usuarios(id),
+    fecha_visita DATE NOT NULL,
+    hora_inicio TIME NOT NULL,
+    hora_fin TIME NOT NULL,
+    direccion_confirmada TEXT,
+    observaciones TEXT,
+    estado VARCHAR(30) NOT NULL DEFAULT 'PROGRAMADA',
+    dictamen VARCHAR(30),
+    observaciones_dictamen TEXT,
+    fecha_limite_subsanacion DATE,
+    fecha_dictamen TIMESTAMP WITH TIME ZONE,
+    evidencia_adecuaciones_urls JSONB DEFAULT '[]'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_visitas_domiciliarias_postulacion ON public.visitas_domiciliarias(postulacion_id);
+
+-- 14. Sprint 3 (SCRUM-87 / SCRUM-92): Tabla adopciones_formales y contratos
+CREATE TABLE IF NOT EXISTS public.adopciones_formales (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    postulacion_id UUID NOT NULL REFERENCES public.postulaciones_adopcion(id),
+    gato_id UUID NOT NULL REFERENCES public.gatos(id),
+    adoptante_id UUID NOT NULL REFERENCES public.usuarios(id),
+    administrador_id UUID NOT NULL REFERENCES public.usuarios(id),
+    direccion_tenencia TEXT,
+    telefono_tenencia VARCHAR(50),
+    observaciones_entrega TEXT,
+    estado_vinculo VARCHAR(30) NOT NULL DEFAULT 'VIGENTE',
+    fecha_adopcion TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    contrato_generado_at TIMESTAMP WITH TIME ZONE,
+    contrato_firmado_url TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_adopciones_formales_gato ON public.adopciones_formales(gato_id);

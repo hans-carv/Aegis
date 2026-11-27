@@ -62,7 +62,7 @@ describe('HU: Programación de visitas de inspección domiciliaria (SCRUM-81)', 
         AND column_default IS NULL;
     `);
 
-    const tipos = ['CI', 'LUZ_AGUA', 'CROQUIS'];
+    const tipos = ['CARNET_IDENTIDAD', 'FACTURA_SERVICIO', 'CROQUIS_DOMICILIO'];
     for (const postId of [postulacionCompleta1Id, postulacionCompleta2Id]) {
       for (const tipo of tipos) {
         const colNames: string[] = [];
