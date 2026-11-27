@@ -347,3 +347,24 @@ ALTER COLUMN estado TYPE VARCHAR(40);
 -- Evitar fallo NOT NULL en registros antiguos de ingresos que no envían codigo_felino explícito
 ALTER TABLE public.gatos
 ALTER COLUMN codigo_felino SET DEFAULT ('CAT-' || UPPER(SUBSTRING(REPLACE(gen_random_uuid()::text, '-', ''), 1, 8)));
+
+
+-- Usuario cliente de prueba esperado por las suites de integración (password: TeoCat2026*)
+INSERT INTO public.usuarios (nombre_completo, email, password_hash, rol_id, activo)
+SELECT
+  'Cliente Prueba TeoCat',
+  'cliente@teocatcafe.bo',
+  password_hash,
+  id,
+  TRUE
+FROM public.roles,
+  (SELECT '$2b$10$QZg4MaAjTR60ufBVtFKCCeRg3iS.9e3YxodK.4veuQUIkp7e9JAmy' AS password_hash) h
+WHERE nombre IN ('USUARIO', 'CLIENTE')
+LIMIT 1
+ON CONFLICT (email) DO UPDATE
+SET activo = TRUE;
+
+INSERT INTO public.usuarios (nombre_completo, email, password_hash, activo, rol_id)
+SELECT 'Hans Cliente', 'hans.cliente@ejemplo.com', '$2b$10$QZg4MaAjTR60ufBVtFKCCeRg3iS.9e3YxodK.4veuQUIkp7e9JAmy', true, id
+FROM public.roles WHERE nombre = 'USUARIO'
+ON CONFLICT (email) DO NOTHING;
