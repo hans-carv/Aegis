@@ -2,9 +2,6 @@ import { pool, query } from '../config/db';
 import { CreatePostulacionDto } from '../dtos/postulacion.dto';
 
 export class PostulacionesService {
-  /**
-   * HU: Registro inmutable de postulación de adopción
-   */
   static async crearPostulacion(usuarioId: string, dto: CreatePostulacionDto) {
     const { gatoId, presupuestoMensual, telefonoContacto, direccionDomicilio, cuestionario } = dto;
 
@@ -45,7 +42,7 @@ export class PostulacionesService {
       const gato = gatoRes.rows[0];
       const estadoGato = String(gato.estado).trim().toUpperCase();
 
-      // Criterio de exclusión: Únicamente puede postularse si está DISPONIBLE
+
       if (estadoGato !== 'DISPONIBLE') {
         throw {
           status: 409,
