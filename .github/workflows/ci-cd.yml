@@ -1,0 +1,80 @@
+name: CI/CD - Backend Aegis (TeoCat)
+
+on:
+  push:
+    branches: [ main, develop, backend ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build-and-test:
+    name: Build, Migraciones PG y Pruebas Jest
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: aegis_user
+          POSTGRES_PASSWORD: aegis_password
+          POSTGRES_DB: aegis_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: ./src/backend
+
+    steps:
+      - name: 1. Descargar código del repositorio
+        uses: actions/checkout@v4
+
+      - name: 2. Configurar Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: './src/backend/package-lock.json'
+
+      - name: 3. Instalar dependencias
+        run: npm ci
+
+      - name: 4. Inicializar esquema en PostgreSQL
+        env:
+          PGPASSWORD: aegis_password
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-client
+          psql -h localhost -U aegis_user -d aegis_test -v ON_ERROR_STOP=1 -f src/config/base_de_datos.txt
+
+      - name: 5. Compilar TypeScript (Build)
+        run: npm run build
+
+      - name: 6. Ejecutar suites de pruebas (Jest + Supertest)
+        env:
+          DATABASE_URL: postgresql://aegis_user:aegis_password@localhost:5432/aegis_test
+          JWT_SECRET: aegis_teocat_super_secret_key_2026
+          FILE_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+          NODE_ENV: test
+        run: npm test
+
+  deploy:
+    name: Despliegue Automático (CD)
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Disparar Deploy Hook en Producción
+        env:
+          DEPLOY_WEBHOOK_URL: ${{ secrets.DEPLOY_WEBHOOK_URL }}
+        run: |
+          if [ -n "$DEPLOY_WEBHOOK_URL" ]; then
+            curl -X POST "$DEPLOY_WEBHOOK_URL"
+          else
+            echo "DEPLOY_WEBHOOK_URL no configurado aún en GitHub Secrets. Pipeline CI validado con éxito."
+          fi
