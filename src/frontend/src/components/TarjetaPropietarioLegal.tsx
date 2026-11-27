@@ -16,6 +16,7 @@ import {
     User,
 } from 'lucide-react'
 import { descargarContratoPdf, subirContratoFirmado } from '../services/adopcionesService'
+import { useToast } from '../context/ToastContext'
 import type { PropietarioLegalActual } from '../types/adopcion'
 
 interface TarjetaPropietarioLegalProps {
@@ -47,6 +48,7 @@ export default function TarjetaPropietarioLegal({
     gatoNombre,
     onContratoActualizado,
 }: TarjetaPropietarioLegalProps) {
+    const { mostrarToast } = useToast()
     const [descargandoPdf, setDescargandoPdf] = useState(false)
     const [archivoFirma, setArchivoFirma] = useState<File | null>(null)
     const [urlFirmaManual, setUrlFirmaManual] = useState('')
@@ -74,12 +76,14 @@ export default function TarjetaPropietarioLegal({
             setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000)
 
             const ahoraIso = new Date().toISOString()
-            setMensajeExito(`Contrato PDF generado correctamente (${filename}).`)
+            const msg = `Contrato PDF generado correctamente (${filename}).`
+            setMensajeExito(msg)
+            mostrarToast(msg, 'success')
             onContratoActualizado?.({ contratoGeneradoAt: ahoraIso })
         } catch (err) {
-            setErrorAccion(
-                err instanceof Error ? err.message : 'No se pudo generar el contrato PDF.'
-            )
+            const msg = err instanceof Error ? err.message : 'No se pudo generar el contrato PDF.'
+            setErrorAccion(msg)
+            mostrarToast(msg, 'error')
         } finally {
             setDescargandoPdf(false)
         }
@@ -110,7 +114,9 @@ export default function TarjetaPropietarioLegal({
 
             setArchivoFirma(null)
             setUrlFirmaManual('')
-            setMensajeExito('Copia del contrato firmado almacenada y verificada en el sistema.')
+            const msg = 'Copia del contrato firmado almacenada y verificada en el sistema.'
+            setMensajeExito(msg)
+            mostrarToast(msg, 'success')
             onContratoActualizado?.({
                 contratoFirmadoUrl: res.contratoFirmadoUrl,
                 contratoGeneradoAt: res.contratoGeneradoAt || propietario.contratoGeneradoAt,

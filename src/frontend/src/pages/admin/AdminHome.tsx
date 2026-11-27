@@ -161,11 +161,20 @@ export default function AdminHome() {
                     </span>
                 </div>
 
-                {/* Estado de carga */}
+                {/* Estado de carga con Skeletons */}
                 {cargando && (
-                    <div className="flex h-48 w-full flex-col items-center justify-center gap-3">
-                        <div className="h-8 w-8 animate-spin rounded-full border-3 border-celeste border-t-marino" />
-                        <p className="font-sans text-sm text-marino/70">Consultando felinos en la base de datos...</p>
+                    <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                        {[1, 2, 3, 4].map((n) => (
+                            <div
+                                key={n}
+                                className="h-80 animate-pulse rounded-2xl border border-beige/60 bg-white/80 p-4 space-y-3"
+                            >
+                                <div className="h-40 w-full rounded-xl bg-crema" />
+                                <div className="h-5 w-2/3 rounded-lg bg-crema" />
+                                <div className="h-4 w-1/2 rounded-lg bg-crema" />
+                                <div className="h-9 w-full rounded-xl bg-crema" />
+                            </div>
+                        ))}
                     </div>
                 )}
 
