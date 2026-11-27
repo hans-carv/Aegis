@@ -1,5 +1,7 @@
 // src/app.ts
 import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
 import authRoutes from './routes/auth.routes';
@@ -14,10 +16,6 @@ import historialClinicoRoutes from './routes/historialClinico.routes';
 import visitasDomiciliariasRoutes from './routes/visitasDomiciliarias.routes';
 import adopcionesFormalesRoutes from './routes/adopcionesFormales.routes';
 import { publicRoutes } from './routes/public.routes';
-
-
-dotenv.config();
-
 const app = express();
 
 app.use(cors());

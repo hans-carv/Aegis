@@ -1,4 +1,3 @@
-// tests/reservas.spec.ts
 import request from 'supertest';
 import app from '../src/app';
 import jwt from 'jsonwebtoken';
@@ -11,7 +10,7 @@ describe('HU: Reserva de turnos y control de aforo (SCRUM-49)', () => {
   
   let franjaLimitadaId: string;
   let franjaBloqueadaId: string;
-  const fechaFuturaLunes = '2026-11-16';
+  const fechaFuturaLunes = '2026-12-07';
 
   beforeAll(async () => {
     const usuariosExistentes = await query('SELECT id FROM public.usuarios LIMIT 2');
@@ -26,13 +25,12 @@ describe('HU: Reserva de turnos y control de aforo (SCRUM-49)', () => {
       const rolRes = await query("SELECT id FROM public.roles WHERE nombre IN ('USUARIO', 'CLIENTE') LIMIT 1");
       const rolId = rolRes.rows[0]?.id;
 
-      const nuevoUser = await query(`
-        INSERT INTO public.usuarios (id, email, password, rol_id)
+      await query(`
+        INSERT INTO public.usuarios (id, nombre_completo, email, password_hash, rol_id)
         VALUES 
-          ('00000000-0000-0000-0000-000000000002', 'test_user1@teocat.bo', 'pass123', $1),
-          ('00000000-0000-0000-0000-000000000003', 'test_user2@teocat.bo', 'pass123', $1)
-        ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email
-        RETURNING id;
+          ('00000000-0000-0000-0000-000000000002', 'Test User 1', 'test_user1@teocat.bo', 'pass123', $1),
+          ('00000000-0000-0000-0000-000000000003', 'Test User 2', 'test_user2@teocat.bo', 'pass123', $1)
+        ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email;
       `, [rolId]);
       
       user1Id = '00000000-0000-0000-0000-000000000002';
@@ -42,7 +40,6 @@ describe('HU: Reserva de turnos y control de aforo (SCRUM-49)', () => {
     user1Token = jwt.sign({ id: user1Id, email: 'test_user1@teocat.bo', rol: 'USUARIO' }, secret);
     user2Token = jwt.sign({ id: user2Id, email: 'test_user2@teocat.bo', rol: 'USUARIO' }, secret);
 
-    // 2. Crear franjas horarias específicas para el test
     const resFranja = await query(`
       INSERT INTO public.franjas_horarias (dia_semana, hora_inicio, hora_fin, aforo_maximo, activo)
       VALUES ('LUNES', '15:00:00', '16:00:00', 1, TRUE)
@@ -59,7 +56,6 @@ describe('HU: Reserva de turnos y control de aforo (SCRUM-49)', () => {
   });
 
   afterAll(async () => {
-    // Limpieza de datos creados
     if (franjaLimitadaId || franjaBloqueadaId) {
       await query('DELETE FROM public.reservas_visita WHERE franja_id IN ($1, $2)', [franjaLimitadaId, franjaBloqueadaId]);
       await query('DELETE FROM public.franjas_horarias WHERE id IN ($1, $2)', [franjaLimitadaId, franjaBloqueadaId]);

@@ -339,3 +339,11 @@ ADD COLUMN IF NOT EXISTS contrato_firmado_url TEXT;
 -- 2. Asegurar columna ci en usuarios si aún no existe
 ALTER TABLE public.usuarios
 ADD COLUMN IF NOT EXISTS ci VARCHAR(30);
+
+-- Ampliar longitud de estado en postulaciones_adopcion para soportar PENDIENTE_ADECUACIONES (22 chars)
+ALTER TABLE public.postulaciones_adopcion
+ALTER COLUMN estado TYPE VARCHAR(40);
+
+-- Evitar fallo NOT NULL en registros antiguos de ingresos que no envían codigo_felino explícito
+ALTER TABLE public.gatos
+ALTER COLUMN codigo_felino SET DEFAULT ('CAT-' || UPPER(SUBSTRING(REPLACE(gen_random_uuid()::text, '-', ''), 1, 8)));
